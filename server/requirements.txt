@@ -50,3 +50,4 @@ typing_extensions==4.12.2
 urllib3==2.2.2
 Werkzeug==3.0.4
 gunicorn==20.1.0
+psutil==6.0.0

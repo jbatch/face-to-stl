@@ -11,6 +11,7 @@ import os
 import logging
 import time
 from functools import lru_cache
+import psutil
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -24,17 +25,25 @@ CORS(app)
 logger.debug(f"Flask app initialized in {time.time() - start_time:.2f} seconds")
 
 
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    logger.debug(f"Memory usage: {mem_info.rss / 1024 / 1024:.2f} MB")
+
+
 # Lazy-loaded rembg model
 @lru_cache(maxsize=1)
 def get_rembg_model():
-    logger.debug("Loading rembg model")
+    logger.debug("Loading rembg model (u2net_lite)")
+    log_memory_usage()
     from rembg import new_session
 
-    return new_session()
+    log_memory_usage()
+
+    return new_session("u2net_lite")
 
 
 def remove_background(image):
-    print("Removing BG")
     # Convert cv2 image to PIL Image
     pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
 
@@ -55,7 +64,6 @@ def remove_background(image):
 
 
 def apply_threshold(image, threshold_value):
-    print(f"Applying threshold {threshold_value}")
     # Apply threshold to make it monochrome
     _, binary = cv2.threshold(image, threshold_value, 255, cv2.THRESH_BINARY)
 
@@ -151,6 +159,8 @@ def generate_stl(image, base_height=5, image_height=2, pixel_size=0.1):
 
 @app.route("/process-images", methods=["POST"])
 def process_images():
+    log_memory_usage()
+    logger.debug("Starting image processing")
     if "image" not in request.files:
         return jsonify({"error": "No file part"}), 400
     file = request.files["image"]
@@ -182,6 +192,9 @@ def process_images():
         img_base64 = base64.b64encode(buffer).decode("utf-8")
         img_base64_list.append(img_base64)
 
+    log_memory_usage()
+    logger.debug("Image processing completed")
+
     return jsonify(
         {"processedImages": img_base64_list, "thresholds": thresholds.tolist()}
     )
@@ -199,7 +212,7 @@ def generate_stl_file():
     img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
 
     # Generate STL file
-    print("Generating STL")
+    logger.debug("Generating STL")
     stl_mesh = generate_stl(img)
 
     # Save STL to a temporary file
@@ -225,6 +238,8 @@ def serve(path):
     else:
         return send_from_directory(app.static_folder, "index.html")
 
+
+logger.debug(f"Total app initialization time: {time.time() - start_time:.2f} seconds")
 
 if __name__ == "__main__":
     # This block will only execute if the script is run directly
