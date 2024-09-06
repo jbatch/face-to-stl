@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { Upload, Image as LucideImage, Loader } from "lucide-react";
+import { API_BASE_URL } from "../config";
 
 const ImageUploader = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -34,11 +35,15 @@ const ImageUploader = () => {
     formData.append("num_thresholds", 9);
 
     try {
-      const response = await axios.post("/process-images", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/process-images`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       setProcessedImages(response.data.processedImages);
       setThresholds(response.data.thresholds);
@@ -68,11 +73,15 @@ const ImageUploader = () => {
     );
 
     try {
-      const response = await axios.post("/generate-stl", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/generate-stl`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       setStlFile(response.data.stlFile);
     } catch (error) {
