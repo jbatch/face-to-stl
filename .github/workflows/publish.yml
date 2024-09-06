@@ -1,0 +1,42 @@
+name: publish
+on:
+  push:
+    branches:
+      - master # or main, depending on your default branch name
+
+jobs:
+  publish-face-to-stl-docker-image:
+    name: Publish Face to STL Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16" # or your preferred Node.js version
+          cache: "yarn"
+          cache-dependency-path: "**/yarn.lock"
+
+      - name: Install client dependencies
+        working-directory: ./client
+        run: yarn install
+
+      - name: Build client
+        working-directory: ./client
+        run: yarn build
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/jbatch/face-to-stl:latest

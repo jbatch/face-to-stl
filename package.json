@@ -1,0 +1,12 @@
+{
+    "name": "face-to-stl",
+    "version": "1.0.0",
+    "scripts": {
+        "start:client": "cd client && yarn start",
+        "start:server": "cd server && python main.py",
+        "start": "concurrently \"npm run start:server\" \"npm run start:client\""
+    },
+    "devDependencies": {
+        "concurrently": "^6.2.0"
+    }
+}
