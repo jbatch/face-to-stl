@@ -75,13 +75,24 @@ def apply_threshold(image, threshold_value):
     return binary
 
 
-def generate_stl(image, base_height=5, image_height=2, pixel_size=0.1):
+def generate_stl(
+    image,
+    base_height=5,
+    image_height=2,
+    pixel_size=0.1,
+    object_height=40,
+    object_width=70,
+):
     # Get image dimensions
     height, width = image.shape
 
+    # Calculate scaling factors
+    scale_x = object_width / (width * pixel_size)
+    scale_y = object_height / (height * pixel_size)
+
     # Create 3D points for base and top
-    x = np.arange(width) * pixel_size
-    y = np.arange(height) * pixel_size
+    x = np.arange(width) * pixel_size * scale_x
+    y = np.arange(height) * pixel_size * scale_y
     xx, yy = np.meshgrid(x, y)
 
     # Create base points
@@ -94,7 +105,7 @@ def generate_stl(image, base_height=5, image_height=2, pixel_size=0.1):
     # Combine all points
     points = np.vstack((base_points.reshape(-1, 3), top_points.reshape(-1, 3)))
 
-    # Create faces
+    # Create faces (rest of the function remains the same)
     faces = []
 
     # Base faces
@@ -170,11 +181,13 @@ def process_images():
     # Read the image
     img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
 
-    # Get the number of thresholds from the request, default to 5
+    # Get parameters from the request
+    min_threshold = int(request.form.get("min_threshold", 64))
+    max_threshold = int(request.form.get("max_threshold", 192))
     num_thresholds = int(request.form.get("num_thresholds", 5))
 
     # Generate equally spaced thresholds
-    thresholds = np.linspace(64, 192, num_thresholds).astype(int)
+    thresholds = np.linspace(min_threshold, max_threshold, num_thresholds).astype(int)
 
     # Remove background once
     gray_no_bg = remove_background(img)
@@ -211,9 +224,13 @@ def generate_stl_file():
     # Read the image
     img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_UNCHANGED)
 
+    # Get parameters from the request
+    object_height = float(request.form.get("object_height", 70))
+    object_width = float(request.form.get("object_width", 40))
+
     # Generate STL file
     logger.debug("Generating STL")
-    stl_mesh = generate_stl(img)
+    stl_mesh = generate_stl(img, object_height=object_height, object_width=object_width)
 
     # Save STL to a temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".stl") as tmp_file:

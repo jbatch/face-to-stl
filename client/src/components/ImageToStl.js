@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import FileUploader from "./FileUploader";
@@ -13,6 +13,13 @@ const ImageToStl = () => {
   const [stlFile, setStlFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingSTL, setIsGeneratingSTL] = useState(false);
+  const [settings, setSettings] = useState({
+    minThreshold: 64,
+    maxThreshold: 192,
+    numImages: 5,
+    objectWidth: 70,
+    objectHeight: 41,
+  });
 
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
@@ -20,6 +27,10 @@ const ImageToStl = () => {
     setSelectedImageIndex(null);
     setStlFile(null);
   };
+
+  const updateSettings = useCallback((newSettings) => {
+    setSettings((prevSettings) => ({ ...prevSettings, ...newSettings }));
+  }, []);
 
   const handleProcessImages = async () => {
     if (!selectedFile) {
@@ -34,7 +45,9 @@ const ImageToStl = () => {
 
     const formData = new FormData();
     formData.append("image", selectedFile);
-    formData.append("num_thresholds", 9);
+    formData.append("min_threshold", settings.minThreshold);
+    formData.append("max_threshold", settings.maxThreshold);
+    formData.append("num_thresholds", settings.numImages);
 
     try {
       const response = await axios.post(
@@ -73,6 +86,8 @@ const ImageToStl = () => {
         `data:image/png;base64,${processedImages[selectedImageIndex]}`
       )
     );
+    formData.append("object_height", settings.objectHeight);
+    formData.append("object_width", settings.objectWidth);
 
     try {
       const response = await axios.post(
@@ -119,6 +134,8 @@ const ImageToStl = () => {
           handleFileChange={handleFileChange}
           handleProcessImages={handleProcessImages}
           isProcessing={isProcessing}
+          settings={settings}
+          updateSettings={updateSettings}
         />
 
         {processedImages.length > 0 && (
