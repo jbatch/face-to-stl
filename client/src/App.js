@@ -1,11 +1,11 @@
 import React from "react";
-import ImageUploader from "./components/ImageUploader";
+import ImageToStl from "./components/ImageToStl";
 
 function App() {
   return (
     <div className="App">
       <main>
-        <ImageUploader />
+        <ImageToStl />
       </main>
     </div>
   );
