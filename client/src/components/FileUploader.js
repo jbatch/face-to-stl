@@ -10,7 +10,49 @@ const FileUploader = ({
   updateSettings,
 }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [aspectRatio, setAspectRatio] = useState(null);
+  const [imageDimensions, setImageDimensions] = useState(null);
+
+  const resizeImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > 800) {
+            height *= 800 / width;
+            width = 800;
+          } else if (height > 800) {
+            width *= 800 / height;
+            height = 800;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              resolve(
+                new File([blob], file.name, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                })
+              );
+            },
+            "image/jpeg",
+            0.85
+          );
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   useEffect(() => {
     if (selectedFile) {
@@ -24,10 +66,10 @@ const FileUploader = ({
       const img = new Image();
       img.onload = () => {
         // Set initial width to 70mm and calculate height to maintain aspect ratio
-        const ar = img.height / img.width;
-        setAspectRatio(ar);
+        setImageDimensions({ width: img.width, height: img.height });
+        const aspectRatio = img.height / img.width;
         const initialWidth = 70;
-        const initialHeight = Math.round(initialWidth * ar);
+        const initialHeight = Math.round(initialWidth * aspectRatio);
         updateSettings({
           objectWidth: initialWidth,
           objectHeight: initialHeight,
@@ -36,11 +78,13 @@ const FileUploader = ({
       img.src = URL.createObjectURL(selectedFile);
     } else {
       setPreviewUrl(null);
+      setImageDimensions(null);
     }
   }, [selectedFile, updateSettings]);
 
   const handleDimensionChange = (dimension, value) => {
-    if (aspectRatio) {
+    if (imageDimensions) {
+      const aspectRatio = imageDimensions.height / imageDimensions.width;
       if (dimension === "width") {
         updateSettings({
           objectWidth: value,
@@ -52,6 +96,14 @@ const FileUploader = ({
           objectWidth: Math.round(value / aspectRatio),
         });
       }
+    }
+  };
+
+  const handleFileChangeAndResize = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const resizedFile = await resizeImage(file);
+      handleFileChange({ target: { files: [resizedFile] } });
     }
   };
 
@@ -71,7 +123,7 @@ const FileUploader = ({
                 id="file-upload"
                 type="file"
                 className="hidden"
-                onChange={handleFileChange}
+                onChange={handleFileChangeAndResize}
                 accept="image/*"
               />
             </label>
@@ -82,6 +134,12 @@ const FileUploader = ({
                   alt="Preview"
                   className="w-full h-auto object-contain rounded-lg"
                 />
+                {imageDimensions && (
+                  <p className="text-center mt-2 text-sm text-gray-600">
+                    Dimensions: {imageDimensions.width} x{" "}
+                    {imageDimensions.height} pixels
+                  </p>
+                )}
               </div>
             )}
           </div>
