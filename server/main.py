@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 import cv2
 import numpy as np
@@ -254,6 +254,15 @@ def serve(path):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, "index.html")
+
+
+@app.route("/static-stl", methods=["GET"])
+def get_static_stl():
+    stl_file_path = "../client/public/output.stl"  # Make sure this matches the path where your generate_stl.py script saves the file
+    if os.path.exists(stl_file_path):
+        return send_file(stl_file_path, as_attachment=True)
+    else:
+        return jsonify({"error": "STL file not found"}), 404
 
 
 logger.debug(f"Total app initialization time: {time.time() - start_time:.2f} seconds")
