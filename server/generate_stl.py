@@ -96,6 +96,18 @@ def generate_stl(
     # Ensure consistent normals
     mesh.fix_normals()
 
+    # Rotate the mesh -90 degrees (or 270 degrees) around the x-axis
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        np.radians(-90), [1, 0, 0]
+    )
+    mesh.apply_transform(rotation_matrix)
+
+    # Shift the mesh up along the Y-axis by half the object height
+    translation_matrix = trimesh.transformations.translation_matrix(
+        [0, 0, object_height / 2]
+    )
+    mesh.apply_transform(translation_matrix)
+
     return mesh
 
 

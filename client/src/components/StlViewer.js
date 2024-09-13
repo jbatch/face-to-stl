@@ -53,20 +53,32 @@ const StlViewer = ({ stlFile }) => {
       const arrayBuffer = base64ToArrayBuffer(stlFile);
       const geometry = loader.parse(arrayBuffer);
 
-      // Rotate the geometry
-      const rotationMatrix = new THREE.Matrix4()
-        .makeRotationX(Math.PI / 2)
-        .multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-      geometry.applyMatrix4(rotationMatrix);
-
-      // Center the geometry
+      // Ensure bounding box and bounding sphere are computed
       geometry.computeBoundingBox();
-      const center = new THREE.Vector3();
-      geometry.boundingBox.getCenter(center);
-      geometry.translate(-center.x, -center.y, -center.z);
+      geometry.computeBoundingSphere();
 
       // Ensure normals are computed correctly
       geometry.computeVertexNormals();
+
+      console.log("Bounding Box:", geometry.boundingBox);
+      console.log("Bounding Sphere:", geometry.boundingSphere);
+
+      // Apply transformations
+      const matrix = new THREE.Matrix4();
+      matrix.makeRotationY(Math.PI); // Rotate 180 degrees around Y-axis
+      geometry.applyMatrix4(matrix);
+
+      matrix.makeRotationX(Math.PI / 2); // Rotate 90 degrees around X-axis
+      geometry.applyMatrix4(matrix);
+
+      const objectWidth =
+        geometry.boundingBox.max.x - geometry.boundingBox.min.x;
+      matrix.makeTranslation(objectWidth, 0, 0); // Translate along X-axis by object width
+      geometry.applyMatrix4(matrix);
+
+      // Update bounding box and sphere after transformations
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
 
       // Custom shader material
       const customMaterial = new THREE.ShaderMaterial({
@@ -109,31 +121,27 @@ const StlViewer = ({ stlFile }) => {
       mesh = new THREE.Mesh(geometry, customMaterial);
       scene.add(mesh);
 
-      // Compute bounding sphere
-      geometry.computeBoundingSphere();
+      // Use bounding sphere for camera positioning
+      const { radius, center } = geometry.boundingSphere;
 
-      if (geometry.boundingSphere) {
-        const { radius } = geometry.boundingSphere;
+      // Position camera to fit the object
+      const distanceToFit = radius * 3;
+      camera.position.set(distanceToFit, distanceToFit, distanceToFit);
+      camera.lookAt(center);
 
-        // Position camera for top-down view
-        const distanceToFit = radius * 2.5;
-        camera.position.set(0, distanceToFit, 0);
-        camera.lookAt(0, 0, 0);
+      // Set controls target to center of the model
+      controls.target.copy(center);
 
-        // Set controls target to center of the model
-        controls.target.set(0, 0, 0);
+      // Set camera near and far planes based on model size
+      camera.near = radius / 100;
+      camera.far = radius * 100;
+      camera.updateProjectionMatrix();
 
-        // Set camera near and far planes based on model size
-        camera.near = radius / 100;
-        camera.far = radius * 100;
-        camera.updateProjectionMatrix();
+      controls.maxDistance = distanceToFit * 10;
+      controls.minDistance = distanceToFit * 0.5;
 
-        controls.maxDistance = distanceToFit * 10;
-        controls.minDistance = distanceToFit * 0.5;
-
-        // Scale AxesHelper based on model size
-        axesHelper.scale.setScalar(radius);
-      }
+      // Scale AxesHelper based on model size
+      axesHelper.scale.setScalar(radius);
 
       controls.update();
 
