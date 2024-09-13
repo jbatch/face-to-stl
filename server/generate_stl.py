@@ -12,6 +12,7 @@ def generate_stl(
     object_height=40,
     object_width=70,
     target_reduction=0.9,  # 90% reduction by default
+    bend_factor=0.0,
 ):
     height, width = image.shape
 
@@ -96,10 +97,23 @@ def generate_stl(
     # Ensure consistent normals
     mesh.fix_normals()
 
+    # Apply bending deformation
+    if bend_factor != 0:
+        vertices = mesh.vertices
+        max_x = vertices[:, 0].max()
+        min_x = vertices[:, 0].min()
+        center_x = (max_x + min_x) / 2
+
+        # Calculate the displacement for bending
+        bend = bend_factor * ((vertices[:, 0] - center_x) / (max_x - center_x)) ** 2
+
+        # Apply the bend to the z-coordinate (assuming z is up)
+        vertices[:, 2] -= bend
+
+        mesh.vertices = vertices
+
     # Rotate the mesh -90 degrees (or 270 degrees) around the x-axis
-    rotation_matrix = trimesh.transformations.rotation_matrix(
-        np.radians(180), [1, 0, 0]
-    )
+    rotation_matrix = trimesh.transformations.rotation_matrix(np.radians(90), [1, 0, 0])
     mesh.apply_transform(rotation_matrix)
     rotation_matrix = trimesh.transformations.rotation_matrix(
         np.radians(180), [0, 1, 0]
@@ -107,14 +121,14 @@ def generate_stl(
     mesh.apply_transform(rotation_matrix)
 
     # Shift the mesh up along the Y-axis by half the object height
-    translation_matrix = trimesh.transformations.translation_matrix(
-        [object_width, 0, 0]
-    )
-    mesh.apply_transform(translation_matrix)
-    translation_matrix = trimesh.transformations.translation_matrix(
-        [0, object_height, 0]
-    )
-    mesh.apply_transform(translation_matrix)
+    # translation_matrix = trimesh.transformations.translation_matrix(
+    #     [object_width, 0, 0]
+    # )
+    # mesh.apply_transform(translation_matrix)
+    # translation_matrix = trimesh.transformations.translation_matrix(
+    #     [0, object_height, 0]
+    # )
+    # mesh.apply_transform(translation_matrix)
 
     return mesh
 
@@ -129,7 +143,9 @@ if __name__ == "__main__":
         exit(1)
 
     # Generate STL
-    mesh = generate_stl(img, base_height=5, image_height=2, target_reduction=0.9)
+    mesh = generate_stl(
+        img, base_height=5, image_height=2, target_reduction=0.9, bend_factor=8
+    )
 
     # Save the STL file
     output_path = os.path.join("..", "client", "public", "output.stl")
