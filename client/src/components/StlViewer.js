@@ -64,17 +64,17 @@ const StlViewer = ({ stlFile }) => {
       console.log("Bounding Sphere:", geometry.boundingSphere);
 
       // Apply transformations
-      const matrix = new THREE.Matrix4();
-      matrix.makeRotationY(Math.PI); // Rotate 180 degrees around Y-axis
-      geometry.applyMatrix4(matrix);
+      // const matrix = new THREE.Matrix4();
+      // matrix.makeRotationY(Math.PI); // Rotate 180 degrees around Y-axis
+      // geometry.applyMatrix4(matrix);
 
-      matrix.makeRotationX(Math.PI / 2); // Rotate 90 degrees around X-axis
-      geometry.applyMatrix4(matrix);
+      // matrix.makeRotationX(Math.PI / 2); // Rotate 90 degrees around X-axis
+      // geometry.applyMatrix4(matrix);
 
-      const objectWidth =
-        geometry.boundingBox.max.x - geometry.boundingBox.min.x;
-      matrix.makeTranslation(objectWidth, 0, 0); // Translate along X-axis by object width
-      geometry.applyMatrix4(matrix);
+      // const objectWidth =
+      //   geometry.boundingBox.max.x - geometry.boundingBox.min.x;
+      // matrix.makeTranslation(objectWidth, 0, 0); // Translate along X-axis by object width
+      // geometry.applyMatrix4(matrix);
 
       // Update bounding box and sphere after transformations
       geometry.computeBoundingBox();
