@@ -167,11 +167,14 @@ const StlViewer = ({ stlFile }) => {
       };
       window.addEventListener("resize", handleResize);
 
+      // Store the current value of mountRef in a variable
+      const currentMount = mountRef.current;
+
       // Cleanup
       return () => {
         window.removeEventListener("resize", handleResize);
-        if (mountRef.current) {
-          mountRef.current.removeChild(renderer.domElement);
+        if (currentMount) {
+          currentMount.removeChild(renderer.domElement);
         }
         if (mesh) {
           scene.remove(mesh);
