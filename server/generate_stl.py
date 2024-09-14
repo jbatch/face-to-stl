@@ -14,6 +14,9 @@ def generate_stl(
     target_reduction=0.9,  # 90% reduction by default
     bend_factor=0.0,
 ):
+    # Flip the image horizontally
+    image = cv2.flip(image, 1)
+
     height, width = image.shape
 
     # Create a grid of points
