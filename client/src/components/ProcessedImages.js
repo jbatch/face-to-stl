@@ -146,6 +146,20 @@ const ProcessedImages = ({
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                 />
               </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="invert-mask"
+                  checked={settings.invertMask}
+                  onChange={(e) =>
+                    updateSettings({ invertMask: e.target.checked })
+                  }
+                  className="mr-2"
+                />
+                <label htmlFor="invert-mask" className="text-sm text-gray-700">
+                  Invert Mask
+                </label>
+              </div>
             </div>
           </div>
           <button

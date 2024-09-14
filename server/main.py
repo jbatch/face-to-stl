@@ -120,6 +120,7 @@ def generate_stl_file():
     object_height = float(request.form.get("object_height", 70))
     object_width = float(request.form.get("object_width", 40))
     bend_factor = float(request.form.get("bend_factor", 0))
+    invert_mask = request.form.get("invert_mask", "false").lower() == "true"
 
     # Generate STL file
     logger.debug("Generating STL")
@@ -128,6 +129,7 @@ def generate_stl_file():
         object_height=object_height,
         object_width=object_width,
         bend_factor=bend_factor,
+        invert_mask=invert_mask,
     )
 
     # Save STL to a temporary file

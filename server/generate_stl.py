@@ -13,9 +13,14 @@ def generate_stl(
     object_width=70,
     target_reduction=0.9,  # 90% reduction by default
     bend_factor=0.0,
+    invert_mask=False,
 ):
     # Flip the image horizontally
     image = cv2.flip(image, 1)
+
+    # Invert the mask if requested
+    if invert_mask:
+        image = 255 - image
 
     height, width = image.shape
 

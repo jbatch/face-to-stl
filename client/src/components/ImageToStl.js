@@ -19,9 +19,10 @@ const ImageToStl = () => {
     maxThreshold: 192,
     numImages: 5,
     removeBg: true,
+    curvedObject: "none",
     objectWidth: 70,
     objectHeight: 41,
-    curvedObject: "none",
+    invertMask: false,
   });
 
   const handleFileChange = (event) => {
@@ -96,6 +97,7 @@ const ImageToStl = () => {
     );
     formData.append("object_height", settings.objectHeight);
     formData.append("object_width", settings.objectWidth);
+    formData.append("invert_mask", settings.invertMask);
 
     // Map curvedObject to bend_factor
     const bendFactor =
