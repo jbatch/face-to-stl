@@ -10,6 +10,7 @@ fast_simplification==0.1.9
 Flask==3.0.3
 Flask-Cors==5.0.0
 flatbuffers==24.3.25
+gunicorn==23.0.0
 humanfriendly==10.0
 idna==3.8
 image==1.5.33
