@@ -112,23 +112,21 @@ def generate_stl(
 
         mesh.vertices = vertices
 
-    # Rotate the mesh -90 degrees (or 270 degrees) around the x-axis
-    rotation_matrix = trimesh.transformations.rotation_matrix(np.radians(90), [1, 0, 0])
-    mesh.apply_transform(rotation_matrix)
-    rotation_matrix = trimesh.transformations.rotation_matrix(
-        np.radians(180), [0, 1, 0]
-    )
-    mesh.apply_transform(rotation_matrix)
-
-    # Shift the mesh up along the Y-axis by half the object height
-    # translation_matrix = trimesh.transformations.translation_matrix(
-    #     [object_width, 0, 0]
-    # )
-    # mesh.apply_transform(translation_matrix)
-    # translation_matrix = trimesh.transformations.translation_matrix(
-    #     [0, object_height, 0]
-    # )
-    # mesh.apply_transform(translation_matrix)
+    # Rotate the piece to stand up if it is bent
+    if bend_factor != 0:
+        rotation_matrix = trimesh.transformations.rotation_matrix(
+            np.radians(90), [1, 0, 0]
+        )
+        mesh.apply_transform(rotation_matrix)
+        rotation_matrix = trimesh.transformations.rotation_matrix(
+            np.radians(180), [0, 1, 0]
+        )
+        mesh.apply_transform(rotation_matrix)
+    else:
+        rotation_matrix = trimesh.transformations.rotation_matrix(
+            np.radians(180), [0, 0, 1]
+        )
+        mesh.apply_transform(rotation_matrix)
 
     return mesh
 

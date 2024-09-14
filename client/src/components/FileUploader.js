@@ -8,9 +8,10 @@ const FileUploader = ({
   isProcessing,
   settings,
   updateSettings,
+  imageDimensions,
+  setImageDimensions,
 }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [imageDimensions, setImageDimensions] = useState(null);
 
   const resizeImage = (file) => {
     return new Promise((resolve) => {
@@ -80,24 +81,7 @@ const FileUploader = ({
       setPreviewUrl(null);
       setImageDimensions(null);
     }
-  }, [selectedFile, updateSettings]);
-
-  const handleDimensionChange = (dimension, value) => {
-    if (imageDimensions) {
-      const aspectRatio = imageDimensions.height / imageDimensions.width;
-      if (dimension === "width") {
-        updateSettings({
-          objectWidth: value,
-          objectHeight: Math.round(value * aspectRatio),
-        });
-      } else {
-        updateSettings({
-          objectHeight: value,
-          objectWidth: Math.round(value / aspectRatio),
-        });
-      }
-    }
-  };
+  }, [selectedFile, setImageDimensions, updateSettings]);
 
   const handleFileChangeAndResize = async (event) => {
     const file = event.target.files[0];
@@ -212,43 +196,19 @@ const FileUploader = ({
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                   />
                 </div>
-
-                <div>
-                  <label
-                    htmlFor="object-height"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Object Height (mm)
-                  </label>
+                <div className="flex items-center">
                   <input
-                    id="object-height"
-                    type="number"
-                    min="1"
-                    value={settings.objectHeight}
+                    type="checkbox"
+                    id="remove-bg"
+                    checked={settings.removeBg}
                     onChange={(e) =>
-                      handleDimensionChange("height", parseInt(e.target.value))
+                      updateSettings({ removeBg: e.target.checked })
                     }
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    className="mr-2"
                   />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="object-width"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Object Width (mm)
+                  <label htmlFor="remove-bg" className="text-sm text-gray-700">
+                    Remove Background
                   </label>
-                  <input
-                    id="object-width"
-                    type="number"
-                    min="1"
-                    value={settings.objectWidth}
-                    onChange={(e) =>
-                      handleDimensionChange("width", parseInt(e.target.value))
-                    }
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                  />
                 </div>
               </div>
 

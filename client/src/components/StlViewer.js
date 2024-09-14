@@ -108,7 +108,7 @@ const StlViewer = ({ stlFile }) => {
           varying vec3 vNormal;
           void main() {
             float t = (vPosition.y - minY) / (maxY - minY);
-            vec3 color = mix(color1, color2, step(5.0/7.0 + 0.1, t));
+            vec3 color = mix(color1, color2, step(0.0 , t));
             
             // Basic lighting calculation
             vec3 light = normalize(vec3(1.0, 1.0, 1.0));

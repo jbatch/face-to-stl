@@ -7,6 +7,7 @@ import StlComponent from "./StlComponent";
 
 const ImageToStl = () => {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [imageDimensions, setImageDimensions] = useState(null);
   const [processedImages, setProcessedImages] = useState([]);
   const [thresholds, setThresholds] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
@@ -17,8 +18,10 @@ const ImageToStl = () => {
     minThreshold: 64,
     maxThreshold: 192,
     numImages: 5,
+    removeBg: true,
     objectWidth: 70,
     objectHeight: 41,
+    curvedObject: "none",
   });
 
   const handleFileChange = (event) => {
@@ -30,6 +33,10 @@ const ImageToStl = () => {
 
   const updateSettings = useCallback((newSettings) => {
     setSettings((prevSettings) => ({ ...prevSettings, ...newSettings }));
+  }, []);
+
+  const updateDimensions = useCallback((dimensions) => {
+    setImageDimensions(dimensions);
   }, []);
 
   const handleProcessImages = async () => {
@@ -48,6 +55,7 @@ const ImageToStl = () => {
     formData.append("min_threshold", settings.minThreshold);
     formData.append("max_threshold", settings.maxThreshold);
     formData.append("num_thresholds", settings.numImages);
+    formData.append("remove_bg", settings.removeBg);
 
     try {
       const response = await axios.post(
@@ -89,6 +97,15 @@ const ImageToStl = () => {
     formData.append("object_height", settings.objectHeight);
     formData.append("object_width", settings.objectWidth);
 
+    // Map curvedObject to bend_factor
+    const bendFactor =
+      settings.curvedObject === "none"
+        ? 0
+        : settings.curvedObject === "inward"
+        ? -8
+        : 8;
+    formData.append("bend_factor", bendFactor);
+
     try {
       const response = await axios.post(
         `${API_BASE_URL}/generate-stl`,
@@ -122,12 +139,6 @@ const ImageToStl = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
-      <header className="bg-blue-600 text-white py-4">
-        <div className="container mx-auto">
-          <h1 className="text-3xl font-bold text-center">Face-to-STL</h1>
-        </div>
-      </header>
-
       <main className="flex-grow container mx-auto px-4 py-8">
         <FileUploader
           selectedFile={selectedFile}
@@ -136,16 +147,21 @@ const ImageToStl = () => {
           isProcessing={isProcessing}
           settings={settings}
           updateSettings={updateSettings}
+          imageDimensions={imageDimensions}
+          setImageDimensions={updateDimensions}
         />
 
         {processedImages.length > 0 && (
           <ProcessedImages
+            settings={settings}
+            updateSettings={updateSettings}
             processedImages={processedImages}
             thresholds={thresholds}
             selectedImageIndex={selectedImageIndex}
             setSelectedImageIndex={setSelectedImageIndex}
             handleGenerateSTL={handleGenerateSTL}
             isGeneratingSTL={isGeneratingSTL}
+            imageDimensions={imageDimensions}
           />
         )}
 

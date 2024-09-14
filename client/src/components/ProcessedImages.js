@@ -1,5 +1,5 @@
-import React from "react";
-import { Loader, LucideImage } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Loader, Image as LucideImage } from "lucide-react";
 
 const ProcessedImages = ({
   processedImages,
@@ -8,40 +8,150 @@ const ProcessedImages = ({
   setSelectedImageIndex,
   handleGenerateSTL,
   isGeneratingSTL,
+  settings,
+  updateSettings,
+  imageDimensions,
 }) => {
+  const [aspectRatio, setAspectRatio] = useState(1);
+
+  useEffect(() => {
+    if (imageDimensions) {
+      const ratio = imageDimensions.height / imageDimensions.width;
+      setAspectRatio(ratio);
+
+      // Set initial width to 70mm and calculate height to maintain aspect ratio
+      const initialWidth = 70;
+      const initialHeight = Math.round(initialWidth * ratio);
+      updateSettings({
+        objectWidth: initialWidth,
+        objectHeight: initialHeight,
+      });
+    }
+  }, [imageDimensions, updateSettings]);
+
+  const handleDimensionChange = (dimension, value) => {
+    const numValue = Number(value);
+    if (isNaN(numValue) || numValue <= 0) return;
+
+    if (dimension === "width") {
+      updateSettings({
+        objectWidth: numValue,
+        objectHeight: Math.round(numValue * aspectRatio),
+      });
+    } else {
+      updateSettings({
+        objectHeight: numValue,
+        objectWidth: Math.round(numValue / aspectRatio),
+      });
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-      <h2 className="text-xl font-semibold mb-4">Processed Images</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {processedImages.map((image, index) => (
-          <div
-            key={index}
-            className={`cursor-pointer rounded-lg overflow-hidden border-4 ${
-              selectedImageIndex === index
-                ? "border-blue-500"
-                : "border-transparent"
-            }`}
-            onClick={() => setSelectedImageIndex(index)}
-          >
-            <div className="bg-gray-200 p-2">
-              <p className="text-center font-semibold">
-                Threshold {thresholds[index]}
-              </p>
+      <h2 className="text-2xl font-bold mb-4">Processed Images</h2>
+      <div className="flex flex-wrap -mx-4">
+        {/* Left column: Generated Images (Scrollable) */}
+        <div className="w-full md:w-2/3 px-4 mb-4 md:mb-0">
+          <div className="h-[calc(100vh-300px)] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {processedImages.map((image, index) => (
+                <div key={index} className="p-1">
+                  <div
+                    className={`relative cursor-pointer overflow-hidden rounded-lg transition-all duration-200 ${
+                      selectedImageIndex === index
+                        ? "ring-4 ring-green-500"
+                        : "hover:ring-2 hover:ring-blue-300"
+                    }`}
+                    onClick={() => setSelectedImageIndex(index)}
+                  >
+                    <img
+                      src={`data:image/png;base64,${image}`}
+                      alt={`Processed ${index + 1}`}
+                      className="w-full h-auto object-contain"
+                    />
+                    <div
+                      className={`absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 px-2 transition-opacity duration-200 ${
+                        selectedImageIndex === index
+                          ? "opacity-0"
+                          : "group-hover:opacity-0"
+                      }`}
+                    >
+                      Threshold: {thresholds[index]}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <img
-              src={`data:image/png;base64,${image}`}
-              alt={`Processed ${index + 1}`}
-              className="w-full h-auto"
-            />
           </div>
-        ))}
-      </div>
-      {selectedImageIndex !== null && (
-        <div className="mt-4 text-center">
+        </div>
+
+        {/* Right column: Options and Generate STL button */}
+        <div className="w-full md:w-1/3 px-4">
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold mb-4">STL Options</h3>
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="curved-object"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Curved Object
+                </label>
+                <select
+                  id="curved-object"
+                  value={settings.curvedObject}
+                  onChange={(e) =>
+                    updateSettings({ curvedObject: e.target.value })
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                >
+                  <option value="none">None</option>
+                  <option value="inward">Inward</option>
+                  <option value="outward">Outward</option>
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="object-width"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Object Width (mm)
+                </label>
+                <input
+                  id="object-width"
+                  type="number"
+                  min="1"
+                  value={settings.objectWidth}
+                  onChange={(e) =>
+                    handleDimensionChange("width", e.target.value)
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="object-height"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Object Height (mm)
+                </label>
+                <input
+                  id="object-height"
+                  type="number"
+                  min="1"
+                  value={settings.objectHeight}
+                  onChange={(e) =>
+                    handleDimensionChange("height", e.target.value)
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                />
+              </div>
+            </div>
+          </div>
           <button
             onClick={handleGenerateSTL}
-            className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded inline-flex items-center"
-            disabled={isGeneratingSTL}
+            className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded inline-flex items-center w-full mt-4"
+            disabled={isGeneratingSTL || selectedImageIndex === null}
           >
             {isGeneratingSTL ? (
               <>
@@ -56,7 +166,7 @@ const ProcessedImages = ({
             )}
           </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
