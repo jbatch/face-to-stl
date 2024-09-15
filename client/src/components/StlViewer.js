@@ -73,8 +73,6 @@ const StlViewer = ({ stlFile }) => {
 
       const objectWidth =
         geometry.boundingBox.max.x - geometry.boundingBox.min.x;
-      const objectHeight =
-        geometry.boundingBox.max.y - geometry.boundingBox.min.y;
       matrix.makeTranslation(objectWidth, 0, 0);
       geometry.applyMatrix4(matrix);
 
