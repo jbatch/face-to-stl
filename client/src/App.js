@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Route, Link, Routes } from "react-router-dom";
 import ImageToStl from "./components/ImageToStl";
 import StaticStlPreview from "./components/StaticStlPreview";
+import MultiColorPhoto from "./components/MultiColorPhoto";
 
 function App() {
   return (
@@ -22,6 +23,11 @@ function App() {
                     Static STL Preview
                   </Link>
                 </li>
+                <li>
+                  <Link to="/multi-color" className="hover:underline">
+                    Multi Color Photo
+                  </Link>
+                </li>
               </ul>
             </nav>
           </div>
@@ -31,6 +37,7 @@ function App() {
           <Routes>
             <Route path="/" element={<ImageToStl />} />
             <Route path="/static-stl" element={<StaticStlPreview />} />
+            <Route path="/multi-color" element={<MultiColorPhoto />} />
           </Routes>
         </main>
       </div>

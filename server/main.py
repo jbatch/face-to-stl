@@ -1,3 +1,4 @@
+import io
 import os
 import cv2
 import numpy as np
@@ -11,7 +12,8 @@ from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from PIL import Image
-from generate_stl import generate_stl  # Import the generate_stl function
+from generate_stl import generate_stl, generate_stl_from_heightmap
+from color import quantize_colors
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -162,6 +164,85 @@ def get_static_stl():
         return send_file(stl_file_path, as_attachment=True)
     else:
         return jsonify({"error": "STL file not found"}), 404
+
+
+@app.route("/quantize-colors", methods=["POST"])
+def quantize_image_colors():
+    if "image" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files["image"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    # Get the number of colors from the request
+    n_colors = int(
+        request.form.get("n_colors", 4)
+    )  # Default to 4 colors if not specified
+
+    # Read the image
+    img = Image.open(file.stream)
+
+    # Quantize colors
+    quantized_img, color_palette = quantize_colors(img, n_colors)
+
+    # Convert the quantized image to base64
+    buffered = io.BytesIO()
+    quantized_img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+    return jsonify({"quantized_image": img_str, "color_palette": color_palette})
+
+
+@app.route("/generate-stl-from-heightmap", methods=["POST"])
+def generate_stl_from_heightmap_api():
+    if "image" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files["image"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    # Get parameters from the request
+    color_palette = request.form.get("color_palette")
+    if not color_palette:
+        return jsonify({"error": "Color palette not provided"}), 400
+
+    try:
+        color_palette = [
+            tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
+            for h in color_palette.split(",")
+        ]
+    except ValueError:
+        return jsonify({"error": "Invalid color palette format"}), 400
+
+    object_height = float(request.form.get("object_height", 40))
+    object_width = float(request.form.get("object_width", 70))
+
+    # Read the image
+    img = Image.open(file.stream)
+
+    # Convert to numpy array
+    height_map_image = np.array(img)
+
+    # Generate STL
+    stl_mesh = generate_stl_from_heightmap(
+        height_map_image,
+        color_palette,
+        object_height=object_height,
+        object_width=object_width,
+    )
+
+    # Save STL to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".stl") as tmp_file:
+        stl_mesh.export(tmp_file.name)
+
+        # Read the temporary file and encode to base64
+        with open(tmp_file.name, "rb") as f:
+            stl_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+    # Remove the temporary file
+    os.unlink(tmp_file.name)
+
+    return jsonify({"stlFile": stl_base64})
 
 
 logger.debug(f"Total app initialization time: {time.time() - start_time:.2f} seconds")

@@ -139,6 +139,119 @@ def generate_stl(
     return mesh
 
 
+def generate_stl_from_heightmap(
+    height_map_image,
+    color_palette,
+    base_height=5.0,
+    image_height=2.0,
+    object_height=40,
+    object_width=70,
+    target_reduction=0.9,
+):
+    height, width = height_map_image.shape[:2]
+
+    # Create a grid of points
+    x = np.linspace(0, object_width, width)
+    y = np.linspace(0, object_height, height)
+    xx, yy = np.meshgrid(x, y)
+
+    # Create base points
+    base_points = np.column_stack(
+        (xx.flatten(), yy.flatten(), np.full(width * height, 0))
+    )
+
+    # Calculate heights for each color
+    color_heights = base_height + np.linspace(0, image_height, len(color_palette))
+
+    # Create a mapping of colors to heights
+    color_to_height = {
+        tuple(color): height for color, height in zip(color_palette, color_heights)
+    }
+
+    # Create top points
+    top_z = np.zeros((height, width))
+    for i in range(height):
+        for j in range(width):
+            color = tuple(height_map_image[i, j])
+            top_z[i, j] = color_to_height.get(color, base_height)
+
+    top_points = np.column_stack((xx.flatten(), yy.flatten(), top_z.flatten()))
+
+    # Combine all points
+    points = np.vstack((base_points, top_points))
+
+    # Create faces
+    faces = []
+
+    # Create base and top faces
+    for y in range(height - 1):
+        for x in range(width - 1):
+            i00 = y * width + x
+            i10 = y * width + (x + 1)
+            i01 = (y + 1) * width + x
+            i11 = (y + 1) * width + (x + 1)
+
+            # Base face (clockwise)
+            faces.extend([[i00, i01, i10], [i10, i01, i11]])
+
+            # Top face (counter-clockwise)
+            i00_top = i00 + width * height
+            i10_top = i10 + width * height
+            i01_top = i01 + width * height
+            i11_top = i11 + width * height
+            faces.extend([[i00_top, i10_top, i01_top], [i10_top, i11_top, i01_top]])
+
+    # Add side faces
+    for y in range(height - 1):
+        # Left side
+        i0 = y * width
+        i1 = (y + 1) * width
+        i0_top = i0 + width * height
+        i1_top = i1 + width * height
+        faces.extend([[i0, i0_top, i1], [i1, i0_top, i1_top]])
+
+        # Right side
+        i0 = (y + 1) * width - 1
+        i1 = (y + 2) * width - 1
+        i0_top = i0 + width * height
+        i1_top = i1 + width * height
+        faces.extend([[i0, i1, i0_top], [i1, i1_top, i0_top]])
+
+    for x in range(width - 1):
+        # Front side
+        i0 = x
+        i1 = x + 1
+        i0_top = i0 + width * height
+        i1_top = i1 + width * height
+        faces.extend([[i0, i1, i0_top], [i1, i1_top, i0_top]])
+
+        # Back side
+        i0 = (height - 1) * width + x
+        i1 = (height - 1) * width + (x + 1)
+        i0_top = i0 + width * height
+        i1_top = i1 + width * height
+        faces.extend([[i0, i0_top, i1], [i1, i0_top, i1_top]])
+
+    # Create the initial mesh using trimesh
+    mesh = trimesh.Trimesh(vertices=points, faces=faces)
+
+    # Simplify the mesh
+    mesh = mesh.simplify_quadric_decimation(target_reduction)
+
+    # Ensure consistent normals
+    mesh.fix_normals()
+
+    # Rotate the mesh -90 degrees (or 270 degrees) around the x-axis
+    rotation_matrix = trimesh.transformations.rotation_matrix(np.radians(90), [1, 0, 0])
+    mesh.apply_transform(rotation_matrix)
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        np.radians(180), [0, 1, 0]
+    )
+    mesh.apply_transform(rotation_matrix)
+
+    return mesh
+
+
 if __name__ == "__main__":
     # Load the image mask
     input_path = os.path.join("..", "client", "public", "danny_mask.png")
