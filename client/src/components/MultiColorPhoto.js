@@ -174,11 +174,15 @@ const MultiColorPhoto = () => {
     setIsGeneratingSTL(true);
     setStlFile(null);
 
+    const aspectRatio = imageDimensions.height / imageDimensions.width;
+    const width = 70;
+    const height = Math.round(width * aspectRatio);
+
     const formData = new FormData();
     formData.append("image", dataURItoBlob(processedImageUrl));
     formData.append("color_palette", colorPalette.join(","));
-    formData.append("object_height", imageDimensions.height);
-    formData.append("object_width", imageDimensions.width);
+    formData.append("object_height", height);
+    formData.append("object_width", width);
 
     try {
       const response = await axios.post(
