@@ -1,19 +1,19 @@
-import io
-import os
+from concurrent.futures import ThreadPoolExecutor
+from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask_cors import CORS
 import cv2
 import numpy as np
 import base64
+from PIL import Image
+import io
 import tempfile
+import os
 import logging
 import time
 from functools import lru_cache
 import psutil
-from concurrent.futures import ThreadPoolExecutor
-from flask import Flask, request, jsonify, send_file, send_from_directory
-from flask_cors import CORS
-from PIL import Image
-from generate_stl import generate_stl, generate_stl_from_heightmap
 from color import quantize_colors
+from generate_stl import generate_stl_from_heightmap, generate_stl
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -131,7 +131,6 @@ def generate_stl_file():
         object_height=object_height,
         object_width=object_width,
         bend_factor=bend_factor,
-        invert_mask=invert_mask,
     )
 
     # Save STL to a temporary file
@@ -174,16 +173,23 @@ def quantize_image_colors():
     if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
 
-    # Get the number of colors from the request
-    n_colors = int(
-        request.form.get("n_colors", 4)
-    )  # Default to 4 colors if not specified
+    # Get the selected colors from the request
+    selected_colors = request.form.get("selected_colors", "")
+    if not selected_colors:
+        return jsonify({"error": "No colors selected"}), 400
+
+    selected_colors = [
+        tuple(int(color[i : i + 2], 16) for i in (0, 2, 4))
+        for color in selected_colors.split(",")
+    ]
 
     # Read the image
     img = Image.open(file.stream)
 
     # Quantize colors
-    quantized_img, color_palette = quantize_colors(img, n_colors)
+    quantized_img, color_palette = quantize_colors(
+        img, selected_colors, remap_colors_to_palette=True
+    )
 
     # Convert the quantized image to base64
     buffered = io.BytesIO()
