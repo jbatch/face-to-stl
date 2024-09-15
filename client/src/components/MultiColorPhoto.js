@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Upload, Image as LucideImage } from "lucide-react";
+import { Upload, Image as LucideImage, Shuffle } from "lucide-react";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import StlComponent from "./StlComponent";
@@ -46,6 +46,13 @@ const MultiColorPhoto = () => {
         .toString(16)
         .padStart(6, "0")
     );
+  };
+
+  const generateRandomPalette = () => {
+    const newColors = Array(numColors)
+      .fill()
+      .map(() => getRandomColor());
+    setSelectedColors(newColors);
   };
 
   const handleFileChange = async (event) => {
@@ -272,22 +279,37 @@ const MultiColorPhoto = () => {
                   {/* Color palette selector */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Suggested Color Palette
+                      Color Palette
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 items-center">
                       {selectedColors.map((color, index) => (
-                        <input
+                        <div
                           key={index}
-                          type="color"
-                          value={color}
-                          onChange={(e) => {
-                            const newColors = [...selectedColors];
-                            newColors[index] = e.target.value;
-                            setSelectedColors(newColors);
-                          }}
-                          className="w-8 h-8 p-0 border-0 rounded-full cursor-pointer"
-                        />
+                          className="w-10 h-10 rounded-full overflow-hidden relative"
+                        >
+                          <input
+                            type="color"
+                            value={color}
+                            onChange={(e) => {
+                              const newColors = [...selectedColors];
+                              newColors[index] = e.target.value;
+                              setSelectedColors(newColors);
+                            }}
+                            className="absolute top-0 left-0 w-full h-full border-0 cursor-pointer opacity-0"
+                          />
+                          <div
+                            className="w-full h-full"
+                            style={{ backgroundColor: color }}
+                          ></div>
+                        </div>
                       ))}
+                      <button
+                        onClick={generateRandomPalette}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded inline-flex items-center h-10"
+                      >
+                        <Shuffle className="w-4 h-4 mr-1" />
+                        Random
+                      </button>
                     </div>
                   </div>
 

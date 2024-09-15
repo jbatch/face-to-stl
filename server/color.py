@@ -30,6 +30,12 @@ def quantize_colors(image, selected_colors, remap_colors_to_palette=True):
     sorted_selected_indices = np.argsort(lab_selected[:, 0])
     sorted_selected_colors = selected_colors[sorted_selected_indices]
 
+    print(
+        "sorted_quantized_colors, sorted_selected_colors",
+        sorted_quantized_colors,
+        sorted_selected_colors,
+    )
+
     if remap_colors_to_palette:
         # Create a mapping from quantized colors to selected colors
         color_map = {
@@ -40,7 +46,7 @@ def quantize_colors(image, selected_colors, remap_colors_to_palette=True):
         # Apply the color mapping to the image
         labels = kmeans.labels_
         new_pixels = np.array(
-            [color_map[tuple(sorted_quantized_colors[label])] for label in labels],
+            [color_map[tuple(quantized_colors[label])] for label in labels],
             dtype=np.uint8,
         )
     else:
@@ -62,7 +68,7 @@ def quantize_colors(image, selected_colors, remap_colors_to_palette=True):
     else:
         color_palette = [
             "{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
-            for r, g, b in quantized_colors
+            for r, g, b in sorted_quantized_colors
         ]
 
     return quantized_pil, color_palette
