@@ -183,12 +183,14 @@ def quantize_image_colors():
         for color in selected_colors.split(",")
     ]
 
+    remap_colors = request.form.get("remap_colors", "true").lower() == "true"
+
     # Read the image
     img = Image.open(file.stream)
 
     # Quantize colors
     quantized_img, color_palette = quantize_colors(
-        img, selected_colors, remap_colors_to_palette=True
+        img, selected_colors, remap_colors_to_palette=remap_colors
     )
 
     # Convert the quantized image to base64

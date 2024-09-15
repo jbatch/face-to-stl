@@ -20,6 +20,7 @@ const MultiColorPhoto = () => {
     "#FF00FF",
     "#FFA500",
   ]);
+  const [remapColors, setRemapColors] = useState(true);
 
   useEffect(() => {
     // Adjust selected colors when numColors changes
@@ -133,6 +134,7 @@ const MultiColorPhoto = () => {
       "selected_colors",
       selectedColors.map((color) => color.slice(1)).join(",")
     );
+    formData.append("remap_colors", remapColors);
 
     try {
       const response = await axios.post(
@@ -287,6 +289,18 @@ const MultiColorPhoto = () => {
                         />
                       ))}
                     </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={remapColors}
+                        onChange={(e) => setRemapColors(e.target.checked)}
+                        className="form-checkbox h-5 w-5 text-blue-600"
+                      />
+                      <span className="ml-2 text-gray-700">Remap Colors</span>
+                    </label>
                   </div>
 
                   <button
