@@ -4,6 +4,25 @@ from PIL import Image
 from skimage import color
 
 
+def to_palette_str(palette):
+    return ["{:02x}{:02x}{:02x}".format(int(r), int(g), int(b)) for r, g, b in palette]
+
+
+def to_lightness(palette):
+    return color.rgb2lab(palette.reshape(1, -1, 3)).reshape(-1, 3)
+
+
+def sort_palette_by_brightness(palette):
+    # Convert to grayscale
+    gray = np.dot(palette, [0.299, 0.587, 0.114])
+
+    # Sort by grayscale (brightness)
+    sorted_idxs = np.argsort(gray)
+    sorted_palette = palette[sorted_idxs]
+
+    return sorted_palette
+
+
 def quantize_colors(image, selected_colors, remap_colors_to_palette=True):
     # Convert image to numpy array
     np_image = np.array(image)
@@ -19,22 +38,12 @@ def quantize_colors(image, selected_colors, remap_colors_to_palette=True):
     # Get the colors
     quantized_colors = kmeans.cluster_centers_
 
-    # Sort quantized colors by lightness
-    lab_colors = color.rgb2lab(quantized_colors.reshape(1, -1, 3)).reshape(-1, 3)
-    sorted_indices = np.argsort(lab_colors[:, 0])
-    sorted_quantized_colors = quantized_colors[sorted_indices]
+    # Sort quantized colors by brightness
+    sorted_quantized_colors = sort_palette_by_brightness(quantized_colors)
 
-    # Sort selected colors by lightness
+    # Sort selected colors by brightness
     selected_colors = np.array(selected_colors)
-    lab_selected = color.rgb2lab(selected_colors.reshape(1, -1, 3)).reshape(-1, 3)
-    sorted_selected_indices = np.argsort(lab_selected[:, 0])
-    sorted_selected_colors = selected_colors[sorted_selected_indices]
-
-    print(
-        "sorted_quantized_colors, sorted_selected_colors",
-        sorted_quantized_colors,
-        sorted_selected_colors,
-    )
+    sorted_selected_colors = sort_palette_by_brightness(selected_colors)
 
     if remap_colors_to_palette:
         # Create a mapping from quantized colors to selected colors
