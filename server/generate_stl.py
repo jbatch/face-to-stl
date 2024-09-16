@@ -93,45 +93,6 @@ def create_and_process_mesh(points, faces, target_reduction):
 
 
 def generate_stl(
-    image,
-    base_height=5,
-    image_height=2,
-    object_height=40,
-    object_width=70,
-    target_reduction=0.9,
-    bend_factor=0.0,
-):
-    height, width = image.shape
-
-    xx, yy = create_grid_points(width, height, object_width, object_height)
-    base_points = create_base_points(xx, yy)
-
-    top_z = base_height + image_height * (image / 255)
-    top_points = create_top_points(xx, yy, top_z)
-
-    points = np.vstack((base_points, top_points))
-    faces = create_faces(height, width)
-
-    mesh = create_and_process_mesh(points, faces, target_reduction)
-
-    if bend_factor != 0:
-        vertices = mesh.vertices
-        max_x = vertices[:, 0].max()
-        min_x = vertices[:, 0].min()
-        center_x = (max_x + min_x) / 2
-
-        # Calculate the displacement for bending
-        bend = bend_factor * ((vertices[:, 0] - center_x) / (max_x - center_x)) ** 2
-
-        # Apply the bend to the z-coordinate (assuming z is up)
-        vertices[:, 2] -= bend
-
-        mesh.vertices = vertices
-
-    return mesh
-
-
-def generate_stl_from_heightmap(
     height_map_image,
     color_palette,
     base_height=5.0,

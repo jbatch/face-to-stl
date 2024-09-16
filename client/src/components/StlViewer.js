@@ -192,7 +192,7 @@ const StlViewer = ({ stlFile, colorPalette }) => {
       console.error("Error in STL viewer:", err);
       setError(`Failed to load STL file: ${err.message}`);
     }
-  }, [stlFile]);
+  }, [colorPalette, stlFile]);
 
   // Helper function to convert base64 to ArrayBuffer
   function base64ToArrayBuffer(base64) {

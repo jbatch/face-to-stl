@@ -139,7 +139,7 @@ const MultiColorPhoto = () => {
 
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/generate-stl-from-heightmap`,
+        `${API_BASE_URL}/generate-stl`,
         formData,
         {
           headers: {
