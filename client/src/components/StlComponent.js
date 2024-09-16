@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { LucideImage } from "lucide-react";
 import StlViewer from "./StlViewer";
 
-const StlComponent = ({ stlFile }) => {
+const StlComponent = ({ stlFile, colorPalette }) => {
   const [stlUrl, setStlUrl] = useState("");
   const containerRef = useRef(null);
 
@@ -28,7 +28,7 @@ const StlComponent = ({ stlFile }) => {
         className="mb-4"
         style={{ height: "400px", width: "100%" }}
       >
-        {stlFile && <StlViewer stlFile={stlFile} />}
+        {stlFile && <StlViewer stlFile={stlFile} colorPalette={colorPalette} />}
       </div>
       <div className="text-center">
         <a

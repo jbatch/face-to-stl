@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
-const StlViewer = ({ stlFile }) => {
+const StlViewer = ({ stlFile, colorPalette }) => {
   const mountRef = useRef(null);
   const [error, setError] = useState(null);
 
@@ -60,9 +60,6 @@ const StlViewer = ({ stlFile }) => {
       // Ensure normals are computed correctly
       geometry.computeVertexNormals();
 
-      console.log("Bounding Box:", geometry.boundingBox);
-      console.log("Bounding Sphere:", geometry.boundingSphere);
-
       // Apply transformations
       const matrix = new THREE.Matrix4();
       matrix.makeRotationZ(-Math.PI); // Rotate 180 degrees around Z-axis
@@ -81,10 +78,18 @@ const StlViewer = ({ stlFile }) => {
       geometry.computeBoundingSphere();
 
       // Custom shader material
+      const colors = colorPalette.reduce(
+        (acc, cur, i) => ({
+          ...acc,
+          [`color${i + 1}`]: { value: new THREE.Color(parseInt(cur, 16)) },
+        }),
+        {}
+      );
+      // TODO (make work with N colors)
+      const layerColorFunc = `mix(color1, color2, step(5.01 , t));`;
       const customMaterial = new THREE.ShaderMaterial({
         uniforms: {
-          color1: { value: new THREE.Color(0x000000) }, // Black
-          color2: { value: new THREE.Color(0xff0000) }, // Red
+          ...colors,
           minY: { value: geometry.boundingBox.min.y },
           maxY: { value: geometry.boundingBox.max.y },
         },
@@ -105,8 +110,8 @@ const StlViewer = ({ stlFile }) => {
           varying vec3 vPosition;
           varying vec3 vNormal;
           void main() {
-            float t = (vPosition.y - minY) / (maxY - minY);
-            vec3 color = mix(color1, color2, step(5.0/7.0+0.01 , t));
+            float t = vPosition.y;
+            vec3 color = ${layerColorFunc};
             
             // Basic lighting calculation
             vec3 light = normalize(vec3(1.0, 1.0, 1.0));

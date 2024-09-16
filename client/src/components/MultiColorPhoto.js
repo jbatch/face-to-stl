@@ -230,18 +230,20 @@ const MultiColorPhoto = () => {
                   </>
                 )}
               </button>
-              <StlGenerator
-                imageProcessed={processedImageUrl !== undefined}
-                isGeneratingSTL={isGeneratingSTL}
-                handleGenerateSTL={handleGenerateSTL}
-              />
+              {processedImageUrl && (
+                <StlGenerator
+                  imageProcessed={processedImageUrl !== undefined}
+                  isGeneratingSTL={isGeneratingSTL}
+                  handleGenerateSTL={handleGenerateSTL}
+                />
+              )}
             </div>
           </div>
         </div>
 
         {stlFile && (
           <div ref={stlPreviewRef}>
-            <StlComponent stlFile={stlFile} />
+            <StlComponent stlFile={stlFile} colorPalette={colorPalette} />
           </div>
         )}
       </main>
