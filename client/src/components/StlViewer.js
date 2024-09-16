@@ -65,10 +65,10 @@ const StlViewer = ({ stlFile }) => {
 
       // Apply transformations
       const matrix = new THREE.Matrix4();
-      // matrix.makeRotationY(-Math.PI); // Rotate 180 degrees around Y-axis
-      // geometry.applyMatrix4(matrix);
+      matrix.makeRotationZ(-Math.PI); // Rotate 180 degrees around Z-axis
+      geometry.applyMatrix4(matrix);
 
-      // matrix.makeRotationX(-Math.PI / 2); // Rotate 90 degrees around X-axis
+      matrix.makeRotationX(-Math.PI / 2); // Rotate 90 degrees around X-axis
       geometry.applyMatrix4(matrix);
 
       const objectWidth =

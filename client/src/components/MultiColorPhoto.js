@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Upload, Image as LucideImage, Shuffle } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
+import FileUploader from "./FileUploader";
+import ColorPaletteSelector from "./ColorPaletteSelector";
+import ImageDisplay from "./ImageDisplay";
+import StlGenerator from "./StlGenerator";
 import StlComponent from "./StlComponent";
+import { FlaskConical } from "lucide-react";
 
 const MultiColorPhoto = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -21,6 +25,8 @@ const MultiColorPhoto = () => {
     "#FFA500",
   ]);
   const [remapColors, setRemapColors] = useState(true);
+  const [showPreview, setShowPreview] = useState(true);
+  const stlPreviewRef = useRef(null);
 
   useEffect(() => {
     // Adjust selected colors when numColors changes
@@ -48,81 +54,25 @@ const MultiColorPhoto = () => {
     );
   };
 
-  const generateRandomPalette = () => {
-    const newColors = Array(numColors)
-      .fill()
-      .map(() => getRandomColor());
-    setSelectedColors(newColors);
+  const handleFileChange = (file) => {
+    setSelectedFile(file);
+    setProcessedImageUrl(null);
+    setColorPalette([]);
+    setStlFile(null);
+    setShowPreview(true);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    const img = new Image();
+    img.onload = () => {
+      setImageDimensions({ width: img.width, height: img.height });
+    };
+    img.src = URL.createObjectURL(file);
   };
-
-  const handleFileChange = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const resizedFile = await resizeImage(file);
-      setSelectedFile(resizedFile);
-    }
-  };
-
-  const resizeImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height && width > 800) {
-            height *= 800 / width;
-            width = 800;
-          } else if (height > 800) {
-            width *= 800 / height;
-            height = 800;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              resolve(
-                new File([blob], file.name, {
-                  type: "image/jpeg",
-                  lastModified: Date.now(),
-                })
-              );
-            },
-            "image/jpeg",
-            0.85
-          );
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  useEffect(() => {
-    if (selectedFile) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(selectedFile);
-
-      const img = new Image();
-      img.onload = () => {
-        setImageDimensions({ width: img.width, height: img.height });
-      };
-      img.src = URL.createObjectURL(selectedFile);
-    } else {
-      setPreviewUrl(null);
-      setImageDimensions(null);
-    }
-  }, [selectedFile]);
 
   const handleProcessImage = async () => {
     if (!selectedFile) {
@@ -134,6 +84,7 @@ const MultiColorPhoto = () => {
     setProcessedImageUrl(null);
     setColorPalette([]);
     setStlFile(null);
+    setShowPreview(false); // Switch to processed view immediately
 
     const formData = new FormData();
     formData.append("image", selectedFile);
@@ -161,10 +112,12 @@ const MultiColorPhoto = () => {
     } catch (error) {
       console.error("Error processing image:", error);
       alert("Error processing image. Please try again.");
+      setShowPreview(true); // Switch back to preview if there's an error
     } finally {
       setIsProcessing(false);
     }
   };
+
   const handleGenerateSTL = async () => {
     if (!processedImageUrl || colorPalette.length === 0) {
       alert("Please process the image first!");
@@ -204,6 +157,12 @@ const MultiColorPhoto = () => {
     }
   };
 
+  useEffect(() => {
+    if (stlFile && stlPreviewRef.current) {
+      stlPreviewRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [stlFile]);
+
   const dataURItoBlob = (dataURI) => {
     const byteString = atob(dataURI.split(",")[1]);
     const mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
@@ -215,189 +174,73 @@ const MultiColorPhoto = () => {
     return new Blob([ab], { type: mimeString });
   };
 
+  const togglePreview = () => {
+    setShowPreview(!showPreview);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex flex-wrap -mx-4">
-            {/* Left column */}
             <div className="w-full md:w-1/2 px-4 mb-4 md:mb-0">
-              <div className="flex flex-col items-center">
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-flex items-center mb-4"
-                >
-                  <Upload className="w-5 h-5 mr-2" />
-                  <span>Choose an image</span>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept="image/*"
-                  />
-                </label>
-                {previewUrl && (
-                  <div className="mt-4 w-full max-w-md">
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="w-full h-auto object-contain rounded-lg"
-                    />
-                    {imageDimensions && (
-                      <p className="text-center mt-2 text-sm text-gray-600">
-                        Dimensions: {imageDimensions.width} x{" "}
-                        {imageDimensions.height} pixels
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
+              <FileUploader onFileChange={handleFileChange} />
+              <ImageDisplay
+                previewUrl={previewUrl}
+                processedImageUrl={processedImageUrl}
+                colorPalette={colorPalette}
+                imageDimensions={imageDimensions}
+                showPreview={showPreview}
+                togglePreview={togglePreview}
+                isProcessing={isProcessing}
+              />
             </div>
-
-            {/* Right column */}
             <div className="w-full md:w-1/2 px-4">
-              {selectedFile && (
-                <div>
-                  <p className="text-gray-600 mb-4">{selectedFile.name}</p>
-
-                  {/* Number of colors slider */}
-                  <div className="mb-4">
-                    <label
-                      htmlFor="num-colors"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Number of Colors: {numColors}
-                    </label>
-                    <input
-                      type="range"
-                      id="num-colors"
-                      min="2"
-                      max="8"
-                      value={numColors}
-                      onChange={(e) => setNumColors(parseInt(e.target.value))}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Color palette selector */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Color Palette
-                    </label>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {selectedColors.map((color, index) => (
-                        <div
-                          key={index}
-                          className="w-10 h-10 rounded-full overflow-hidden relative"
-                        >
-                          <input
-                            type="color"
-                            value={color}
-                            onChange={(e) => {
-                              const newColors = [...selectedColors];
-                              newColors[index] = e.target.value;
-                              setSelectedColors(newColors);
-                            }}
-                            className="absolute top-0 left-0 w-full h-full border-0 cursor-pointer opacity-0"
-                          />
-                          <div
-                            className="w-full h-full"
-                            style={{ backgroundColor: color }}
-                          ></div>
-                        </div>
-                      ))}
-                      <button
-                        onClick={generateRandomPalette}
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded inline-flex items-center h-10"
-                      >
-                        <Shuffle className="w-4 h-4 mr-1" />
-                        Random
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={remapColors}
-                        onChange={(e) => setRemapColors(e.target.checked)}
-                        className="form-checkbox h-5 w-5 text-blue-600"
-                      />
-                      <span className="ml-2 text-gray-700">Remap Colors</span>
-                    </label>
-                  </div>
-
-                  <button
-                    onClick={handleProcessImage}
-                    className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded inline-flex items-center"
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <LucideImage className="w-5 h-5 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <LucideImage className="w-5 h-5 mr-2" />
-                        Process Image
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
+              <ColorPaletteSelector
+                numColors={numColors}
+                setNumColors={setNumColors}
+                selectedColors={selectedColors}
+                setSelectedColors={setSelectedColors}
+              />
+              <div className="mb-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={remapColors}
+                    onChange={(e) => setRemapColors(e.target.checked)}
+                    className="form-checkbox h-5 w-5 text-blue-600"
+                  />
+                  <span className="ml-2 text-gray-700">Remap Colors</span>
+                </label>
+              </div>
+              <button
+                onClick={handleProcessImage}
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded inline-flex items-center"
+                disabled={isProcessing || !selectedFile}
+              >
+                {isProcessing ? (
+                  <>
+                    <FlaskConical className="w-5 h-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <FlaskConical className="w-5 h-5 mr-2" />
+                    Process Image
+                  </>
+                )}
+              </button>
+              <StlGenerator
+                imageProcessed={processedImageUrl !== undefined}
+                isGeneratingSTL={isGeneratingSTL}
+                handleGenerateSTL={handleGenerateSTL}
+              />
             </div>
           </div>
         </div>
 
-        {/* Processed Image Section */}
-        {processedImageUrl && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-4">Processed Image</h2>
-            <div className="flex justify-center mb-4">
-              <img
-                src={processedImageUrl}
-                alt="Processed"
-                className="max-w-full h-auto object-contain rounded-lg"
-              />
-            </div>
-            <div className="flex justify-center space-x-4 mb-4">
-              {colorPalette.map((color, index) => (
-                <div
-                  key={index}
-                  className="w-8 h-8 rounded-full"
-                  style={{ backgroundColor: `#${color}` }}
-                />
-              ))}
-            </div>
-            <div className="flex justify-center">
-              <button
-                onClick={handleGenerateSTL}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-flex items-center"
-                disabled={isGeneratingSTL}
-              >
-                {isGeneratingSTL ? (
-                  <>
-                    <LucideImage className="w-5 h-5 mr-2 animate-spin" />
-                    Generating STL...
-                  </>
-                ) : (
-                  <>
-                    <LucideImage className="w-5 h-5 mr-2" />
-                    Generate STL
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* StlComponent Section */}
         {stlFile && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-4">3D Model Preview</h2>
+          <div ref={stlPreviewRef}>
             <StlComponent stlFile={stlFile} />
           </div>
         )}
