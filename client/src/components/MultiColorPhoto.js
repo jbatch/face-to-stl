@@ -28,6 +28,8 @@ const MultiColorPhoto = () => {
   const [showPreview, setShowPreview] = useState(true);
   const [stlGenerationProgress, setStlGenerationProgress] = useState(0);
   const [stlResolution, setStlResolution] = useState(0.5); // 50% of original resolution
+  const [baseHeight, setBaseHeight] = useState(5); // Default base height in mm
+  const [layerHeight, setLayerHeight] = useState(0.5); // Default layer height in mm
   const stlPreviewRef = useRef(null);
 
   const [imageProcessorWorker, setImageProcessorWorker] = useState(null);
@@ -121,13 +123,16 @@ const MultiColorPhoto = () => {
 
     const imageData = await createImageData(processedImageUrl);
 
+    const scaleZ = layerHeight;
+
     stlGeneratorWorker.postMessage({
       imageData,
       colorPalette,
       objectWidth: width,
       objectHeight: height,
       resolution: stlResolution,
-      scaleZ: 2 // default z height is 0.5mm, this is a multiplier
+      baseHeight,
+      scaleZ
     });
 
     stlGeneratorWorker.onmessage = (e) => {
@@ -253,6 +258,36 @@ const MultiColorPhoto = () => {
                   step="0.1"
                   value={stlResolution}
                   onChange={(e) => setStlResolution(parseFloat(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="base-height" className="block text-sm font-medium text-gray-700">
+                  Base Height (mm): {baseHeight}
+                </label>
+                <input
+                  type="range"
+                  id="base-height"
+                  min="1"
+                  max="10"
+                  step="0.5"
+                  value={baseHeight}
+                  onChange={(e) => setBaseHeight(parseFloat(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="layer-height" className="block text-sm font-medium text-gray-700">
+                  Layer Height (mm): {layerHeight}
+                </label>
+                <input
+                  type="range"
+                  id="layer-height"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  value={layerHeight}
+                  onChange={(e) => setLayerHeight(parseFloat(e.target.value))}
                   className="w-full"
                 />
               </div>

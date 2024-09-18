@@ -13,17 +13,18 @@ self.onmessage = function(e) {
   log('Received message in STL generator worker', e.data);
   
   try {
-    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight = 5, resolution = 1 } = e.data;
+    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution = 1, scaleZ } = e.data;
     
     log('Starting STL generation', { 
       imageDataSize: `${imageData.width}x${imageData.height}`, 
       colorPaletteSize: colorPalette.length,
       objectDimensions: `${objectWidth}x${objectHeight}`,
       baseHeight,
-      resolution
+      resolution,
+      scaleZ
     });
 
-    const stlData = generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution);
+    const stlData = generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ);
     
     log('STL generation completed', { stlDataSize: stlData.byteLength });
     
@@ -35,7 +36,7 @@ self.onmessage = function(e) {
   }
 };
 
-function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution) {
+function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ) {
   log('Generating STL', { stage: 'start' });
 
   const geometry = new THREE.BufferGeometry();
@@ -47,7 +48,6 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
   const height = Math.floor(imageData.height * resolution);
   const scaleX = objectWidth / (width - 1);
   const scaleY = objectHeight / (height - 1);
-  const scaleZ = 1; // Increase this value to make layers taller
 
   log('Generating top surface', { width, height, scaleX, scaleY, scaleZ });
 
