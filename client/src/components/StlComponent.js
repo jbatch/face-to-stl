@@ -3,23 +3,7 @@ import { LucideImage } from "lucide-react";
 import StlViewer from "./StlViewer";
 
 const StlComponent = ({ stlFile, colorPalette }) => {
-  const [stlUrl, setStlUrl] = useState("");
   const containerRef = useRef(null);
-
-  useEffect(() => {
-    console.log({lbatch:'here', stlFile})
-    const binaryString = atob(stlFile);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const blob = new Blob([bytes], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    setStlUrl(url);
-
-    return () => URL.revokeObjectURL(url);
-  }, [stlFile]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -33,7 +17,7 @@ const StlComponent = ({ stlFile, colorPalette }) => {
       </div>
       <div className="text-center">
         <a
-          href={stlUrl}
+          href={stlFile}
           download="face_model.stl"
           className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-flex items-center"
         >

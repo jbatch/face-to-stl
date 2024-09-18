@@ -1,5 +1,3 @@
-// src/workers/stlGenerator.worker.js
-
 /* eslint-disable no-restricted-globals */
 import * as THREE from 'three';
 
@@ -15,7 +13,7 @@ self.onmessage = function(e) {
   log('Received message in STL generator worker', e.data);
   
   try {
-    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight = 2, resolution = 1 } = e.data;
+    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight = 5, resolution = 1 } = e.data;
     
     log('Starting STL generation', { 
       imageDataSize: `${imageData.width}x${imageData.height}`, 
@@ -49,8 +47,9 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
   const height = Math.floor(imageData.height * resolution);
   const scaleX = objectWidth / (width - 1);
   const scaleY = objectHeight / (height - 1);
+  const scaleZ = 1; // Increase this value to make layers taller
 
-  log('Generating top surface', { width, height, scaleX, scaleY });
+  log('Generating top surface', { width, height, scaleX, scaleY, scaleZ });
 
   // Generate top surface
   for (let y = 0; y < height; y++) {
@@ -64,7 +63,7 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
       const color = rgbToHex([r, g, b]);
       const colorIndex = colorPalette.indexOf(color);
       
-      const z = baseHeight + (colorIndex !== -1 ? colorIndex * 0.5 : 0);
+      const z = baseHeight + (colorIndex !== -1 ? colorIndex * scaleZ : 0);
 
       vertices.push(x * scaleX, y * scaleY, z);
       normals.push(0, 0, 1);

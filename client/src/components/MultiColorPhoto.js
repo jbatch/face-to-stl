@@ -126,7 +126,8 @@ const MultiColorPhoto = () => {
       colorPalette,
       objectWidth: width,
       objectHeight: height,
-      resolution: stlResolution
+      resolution: stlResolution,
+      scaleZ: 2 // default z height is 0.5mm, this is a multiplier
     });
 
     stlGeneratorWorker.onmessage = (e) => {
