@@ -23,7 +23,7 @@ def sort_palette_by_brightness(palette):
     return sorted_palette
 
 
-def quantize_colors(image, selected_colors, remap_colors_to_palette=True):
+def quantize_colors(image, selected_colors, remap_colors_to_palette=True, reverse_palette=False):
     # Convert image to numpy array
     np_image = np.array(image)
 
@@ -44,6 +44,10 @@ def quantize_colors(image, selected_colors, remap_colors_to_palette=True):
     # Sort selected colors by brightness
     selected_colors = np.array(selected_colors)
     sorted_selected_colors = sort_palette_by_brightness(selected_colors)
+
+    if reverse_palette:
+        sorted_quantized_colors = sorted_quantized_colors[::-1]
+        sorted_selected_colors = sorted_selected_colors[::-1]
 
     if remap_colors_to_palette:
         # Create a mapping from quantized colors to selected colors
