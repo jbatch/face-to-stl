@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../config";
 import FileUploader from "./FileUploader";
 import ColorPaletteSelector from "./ColorPaletteSelector";
 import ImageDisplay from "./ImageDisplay";
@@ -28,6 +26,8 @@ const MultiColorPhoto = () => {
   const [reversePalette, setReversePalette] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const stlPreviewRef = useRef(null);
+  const [imageProcessorWorker, setImageProcessorWorker] = useState(null);
+  const [stlGeneratorWorker, setStlGeneratorWorker] = useState(null);
 
   useEffect(() => {
     // Adjust selected colors when numColors changes
@@ -45,6 +45,19 @@ const MultiColorPhoto = () => {
       return newColors;
     });
   }, [numColors]);
+
+  useEffect(() => {
+    const imgWorker = new Worker(new URL('../workers/imageProcessor.worker.js', import.meta.url));
+    const stlWorker = new Worker(new URL('../workers/stlGenerator.worker.js', import.meta.url));
+
+    setImageProcessorWorker(imgWorker);
+    setStlGeneratorWorker(stlWorker);
+
+    return () => {
+      imgWorker.terminate();
+      stlWorker.terminate();
+    };
+  }, []);
 
   const getRandomColor = () => {
     return (
@@ -76,7 +89,7 @@ const MultiColorPhoto = () => {
   };
 
   const handleProcessImage = async () => {
-    if (!selectedFile) {
+    if (!selectedFile || !imageProcessorWorker) {
       alert("Please select an image first!");
       return;
     }
@@ -85,43 +98,33 @@ const MultiColorPhoto = () => {
     setProcessedImageUrl(null);
     setColorPalette([]);
     setStlFile(null);
-    setShowPreview(false); // Switch to processed view immediately
+    setShowPreview(false);
 
-    const formData = new FormData();
-    formData.append("image", selectedFile);
-    formData.append(
-      "selected_colors",
-      selectedColors.map((color) => color.slice(1)).join(",")
-    );
-    formData.append("remap_colors", remapColors);
-    formData.append("reverse_palette", reversePalette);
+    const imageData = await createImageData(selectedFile);
+    
+    imageProcessorWorker.postMessage({
+      imageData,
+      numColors,
+      selectedColors,
+      remapColors
+    });
 
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/quantize-colors`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      setProcessedImageUrl(
-        `data:image/png;base64,${response.data.quantized_image}`
-      );
-      setColorPalette(response.data.color_palette);
-    } catch (error) {
-      console.error("Error processing image:", error);
-      alert("Error processing image. Please try again.");
-      setShowPreview(true); // Switch back to preview if there's an error
-    } finally {
+    imageProcessorWorker.onmessage = (e) => {
+      const { quantizedImageData, colorPalette } = e.data;
+      const canvas = document.createElement('canvas');
+      canvas.width = quantizedImageData.width;
+      canvas.height = quantizedImageData.height;
+      const ctx = canvas.getContext('2d');
+      ctx.putImageData(quantizedImageData, 0, 0);
+      
+      setProcessedImageUrl(canvas.toDataURL());
+      setColorPalette(colorPalette);
       setIsProcessing(false);
-    }
+    };
   };
 
   const handleGenerateSTL = async () => {
-    if (!processedImageUrl || colorPalette.length === 0) {
+    if (!processedImageUrl || colorPalette.length === 0 || !stlGeneratorWorker) {
       alert("Please process the image first!");
       return;
     }
@@ -133,30 +136,36 @@ const MultiColorPhoto = () => {
     const width = 70;
     const height = Math.round(width * aspectRatio);
 
-    const formData = new FormData();
-    formData.append("image", dataURItoBlob(processedImageUrl));
-    formData.append("color_palette", colorPalette.join(","));
-    formData.append("object_height", height);
-    formData.append("object_width", width);
+    const imageData = await createImageData(processedImageUrl);
 
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/generate-stl`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+    stlGeneratorWorker.postMessage({
+      imageData,
+      colorPalette,
+      objectWidth: width,
+      objectHeight: height,
+      baseHeight: 5 // Specify the desired base height in mm
+    });
 
-      setStlFile(response.data.stlFile);
-    } catch (error) {
-      console.error("Error generating STL:", error);
-      alert("Error generating STL. Please try again.");
-    } finally {
+    stlGeneratorWorker.onmessage = (e) => {
+      const stlData = e.data;
+      setStlFile(btoa(stlData));
       setIsGeneratingSTL(false);
-    }
+    };
+  };
+
+  const createImageData = (src) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(ctx.getImageData(0, 0, img.width, img.height));
+      };
+      img.src = typeof src === 'string' ? src : URL.createObjectURL(src);
+    });
   };
 
   useEffect(() => {
@@ -164,17 +173,6 @@ const MultiColorPhoto = () => {
       stlPreviewRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [stlFile]);
-
-  const dataURItoBlob = (dataURI) => {
-    const byteString = atob(dataURI.split(",")[1]);
-    const mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ab], { type: mimeString });
-  };
 
   const togglePreview = () => {
     setShowPreview(!showPreview);
