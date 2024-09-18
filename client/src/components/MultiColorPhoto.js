@@ -30,6 +30,7 @@ const MultiColorPhoto = () => {
   const [stlResolution, setStlResolution] = useState(0.5); // 50% of original resolution
   const [baseHeight, setBaseHeight] = useState(5); // Default base height in mm
   const [layerHeight, setLayerHeight] = useState(0.5); // Default layer height in mm
+  const [simplificationLevel, setSimplificationLevel] = useState(0);
   const stlPreviewRef = useRef(null);
 
   const [imageProcessorWorker, setImageProcessorWorker] = useState(null);
@@ -132,7 +133,8 @@ const MultiColorPhoto = () => {
       objectHeight: height,
       resolution: stlResolution,
       baseHeight,
-      scaleZ
+      scaleZ,
+      simplificationLevel
     });
 
     stlGeneratorWorker.onmessage = (e) => {
@@ -261,6 +263,21 @@ const MultiColorPhoto = () => {
                   className="w-full"
                 />
               </div>
+              <div className="mb-4">
+              <label htmlFor="simplification-level" className="block text-sm font-medium text-gray-700">
+                Simplification Level: {simplificationLevel}
+              </label>
+              <input
+                type="range"
+                id="simplification-level"
+                min="0"
+                max="3"
+                step="1"
+                value={simplificationLevel}
+                onChange={(e) => setSimplificationLevel(parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
               <div className="mb-4">
                 <label htmlFor="base-height" className="block text-sm font-medium text-gray-700">
                   Base Height (mm): {baseHeight}

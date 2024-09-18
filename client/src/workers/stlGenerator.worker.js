@@ -13,7 +13,7 @@ self.onmessage = function(e) {
   log('Received message in STL generator worker', e.data);
   
   try {
-    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution = 1, scaleZ } = e.data;
+    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution = 1, scaleZ, simplificationLevel = 0 } = e.data;
     
     log('Starting STL generation', { 
       imageDataSize: `${imageData.width}x${imageData.height}`, 
@@ -21,10 +21,11 @@ self.onmessage = function(e) {
       objectDimensions: `${objectWidth}x${objectHeight}`,
       baseHeight,
       resolution,
-      scaleZ
+      scaleZ,
+      simplificationLevel
     });
 
-    const stlData = generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ);
+    const stlData = generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ, simplificationLevel);
     
     log('STL generation completed', { stlDataSize: stlData.byteLength });
     
@@ -36,7 +37,7 @@ self.onmessage = function(e) {
   }
 };
 
-function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ) {
+function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ, simplificationLevel) {
   log('Generating STL', { stage: 'start' });
 
   const geometry = new THREE.BufferGeometry();
@@ -49,11 +50,14 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
   const scaleX = objectWidth / (width - 1);
   const scaleY = objectHeight / (height - 1);
 
-  log('Generating top surface', { width, height, scaleX, scaleY, scaleZ });
+  // Apply simplification
+  const skipFactor = Math.pow(2, simplificationLevel);
+
+  log('Generating top surface', { width, height, scaleX, scaleY, scaleZ, skipFactor });
 
   // Generate top surface
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
+  for (let y = 0; y < height; y += skipFactor) {
+    for (let x = 0; x < width; x += skipFactor) {
       const i = (Math.floor(y / resolution) * imageData.width + Math.floor(x / resolution)) * 4;
       
       const r = imageData.data[i];
@@ -68,18 +72,18 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
       vertices.push(x * scaleX, y * scaleY, z);
       normals.push(0, 0, 1);
 
-      if (x < width - 1 && y < height - 1) {
-        const a = y * width + x;
-        const b = y * width + (x + 1);
-        const c = (y + 1) * width + x;
-        const d = (y + 1) * width + (x + 1);
+      if (x < width - skipFactor && y < height - skipFactor) {
+        const a = (y / skipFactor) * (width / skipFactor) + (x / skipFactor);
+        const b = a + 1;
+        const c = ((y / skipFactor) + 1) * (width / skipFactor) + (x / skipFactor);
+        const d = c + 1;
 
         indices.push(a, c, b);
         indices.push(b, c, d);
       }
     }
     
-    if (y % 10 === 0) {
+    if (y % (10 * skipFactor) === 0) {
       reportProgress((y / height) * 100);
     }
   }
@@ -93,20 +97,20 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
 
   // Generate base
   const baseVertexOffset = vertices.length / 3;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
+  for (let y = 0; y < height; y += skipFactor) {
+    for (let x = 0; x < width; x += skipFactor) {
       vertices.push(x * scaleX, y * scaleY, 0);
       normals.push(0, 0, -1);
     }
   }
 
   // Add base faces
-  for (let y = 0; y < height - 1; y++) {
-    for (let x = 0; x < width - 1; x++) {
-      const a = baseVertexOffset + y * width + x;
-      const b = baseVertexOffset + y * width + (x + 1);
-      const c = baseVertexOffset + (y + 1) * width + x;
-      const d = baseVertexOffset + (y + 1) * width + (x + 1);
+  for (let y = 0; y < height - skipFactor; y += skipFactor) {
+    for (let x = 0; x < width - skipFactor; x += skipFactor) {
+      const a = baseVertexOffset + (y / skipFactor) * (width / skipFactor) + (x / skipFactor);
+      const b = a + 1;
+      const c = baseVertexOffset + ((y / skipFactor) + 1) * (width / skipFactor) + (x / skipFactor);
+      const d = c + 1;
 
       indices.push(a, b, c);
       indices.push(b, d, c);
@@ -115,8 +119,8 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
 
   // Generate side walls
   const addSideWall = (x1, y1, x2, y2) => {
-    const index1 = y1 * width + x1;
-    const index2 = y2 * width + x2;
+    const index1 = (y1 / skipFactor) * (width / skipFactor) + (x1 / skipFactor);
+    const index2 = (y2 / skipFactor) * (width / skipFactor) + (x2 / skipFactor);
     const topZ1 = vertices[index1 * 3 + 2];
     const topZ2 = vertices[index2 * 3 + 2];
     const bottomZ = 0;
@@ -139,13 +143,13 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
   };
 
   // Add side walls
-  for (let x = 0; x < width - 1; x++) {
-    addSideWall(x, 0, x + 1, 0); // Front
-    addSideWall(x, height - 1, x + 1, height - 1); // Back
+  for (let x = 0; x < width - skipFactor; x += skipFactor) {
+    addSideWall(x, 0, x + skipFactor, 0); // Front
+    addSideWall(x, height - skipFactor, x + skipFactor, height - skipFactor); // Back
   }
-  for (let y = 0; y < height - 1; y++) {
-    addSideWall(0, y, 0, y + 1); // Left
-    addSideWall(width - 1, y, width - 1, y + 1); // Right
+  for (let y = 0; y < height - skipFactor; y += skipFactor) {
+    addSideWall(0, y, 0, y + skipFactor); // Left
+    addSideWall(width - skipFactor, y, width - skipFactor, y + skipFactor); // Right
   }
 
   log('Creating THREE.js BufferGeometry', { 
