@@ -25,6 +25,7 @@ const MultiColorPhoto = () => {
     "#FFA500",
   ]);
   const [remapColors, setRemapColors] = useState(true);
+  const [reversePalette, setReversePalette] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const stlPreviewRef = useRef(null);
 
@@ -93,6 +94,7 @@ const MultiColorPhoto = () => {
       selectedColors.map((color) => color.slice(1)).join(",")
     );
     formData.append("remap_colors", remapColors);
+    formData.append("reverse_palette", reversePalette);
 
     try {
       const response = await axios.post(
@@ -211,6 +213,17 @@ const MultiColorPhoto = () => {
                     className="form-checkbox h-5 w-5 text-blue-600"
                   />
                   <span className="ml-2 text-gray-700">Remap Colors</span>
+                </label>
+              </div>
+              <div className="mb-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={reversePalette}
+                    onChange={(e) => setReversePalette(e.target.checked)}
+                    className="form-checkbox h-5 w-5 text-blue-600"
+                  />
+                  <span className="ml-2 text-gray-700">Reverse Palette Order</span>
                 </label>
               </div>
               <button
