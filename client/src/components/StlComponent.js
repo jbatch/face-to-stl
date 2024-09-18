@@ -7,6 +7,7 @@ const StlComponent = ({ stlFile, colorPalette }) => {
   const containerRef = useRef(null);
 
   useEffect(() => {
+    console.log({lbatch:'here', stlFile})
     const binaryString = atob(stlFile);
     const len = binaryString.length;
     const bytes = new Uint8Array(len);

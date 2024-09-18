@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import { API_BASE_URL } from "../config";
 import FileUploader from "./FileUploader";
 import ColorPaletteSelector from "./ColorPaletteSelector";
 import ImageDisplay from "./ImageDisplay";
@@ -23,28 +25,13 @@ const MultiColorPhoto = () => {
     "#FFA500",
   ]);
   const [remapColors, setRemapColors] = useState(true);
-  const [reversePalette, setReversePalette] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [stlGenerationProgress, setStlGenerationProgress] = useState(0);
+  const [stlResolution, setStlResolution] = useState(0.5); // 50% of original resolution
   const stlPreviewRef = useRef(null);
+
   const [imageProcessorWorker, setImageProcessorWorker] = useState(null);
   const [stlGeneratorWorker, setStlGeneratorWorker] = useState(null);
-
-  useEffect(() => {
-    // Adjust selected colors when numColors changes
-    setSelectedColors((prevColors) => {
-      const newColors = [...prevColors];
-      if (numColors > prevColors.length) {
-        // Add colors if needed
-        while (newColors.length < numColors) {
-          newColors.push(getRandomColor());
-        }
-      } else if (numColors < prevColors.length) {
-        // Remove colors if needed
-        newColors.splice(numColors);
-      }
-      return newColors;
-    });
-  }, [numColors]);
 
   useEffect(() => {
     const imgWorker = new Worker(new URL('../workers/imageProcessor.worker.js', import.meta.url));
@@ -59,14 +46,9 @@ const MultiColorPhoto = () => {
     };
   }, []);
 
-  const getRandomColor = () => {
-    return (
-      "#" +
-      Math.floor(Math.random() * 16777215)
-        .toString(16)
-        .padStart(6, "0")
-    );
-  };
+  useEffect(() => {
+    console.log("STL File updated:", stlFile);
+  }, [stlFile]);
 
   const handleFileChange = (file) => {
     setSelectedFile(file);
@@ -131,6 +113,7 @@ const MultiColorPhoto = () => {
 
     setIsGeneratingSTL(true);
     setStlFile(null);
+    setStlGenerationProgress(0);
 
     const aspectRatio = imageDimensions.height / imageDimensions.width;
     const width = 70;
@@ -143,13 +126,33 @@ const MultiColorPhoto = () => {
       colorPalette,
       objectWidth: width,
       objectHeight: height,
-      baseHeight: 5 // Specify the desired base height in mm
+      resolution: stlResolution
     });
 
     stlGeneratorWorker.onmessage = (e) => {
-      const stlData = e.data;
-      setStlFile(btoa(stlData));
-      setIsGeneratingSTL(false);
+      const { type, message, data, percentage } = e.data;
+      switch (type) {
+        case 'log':
+          console.log(`STL Generator: ${message}`, data);
+          break;
+        case 'progress':
+          setStlGenerationProgress(percentage);
+          break;
+        case 'result':
+          console.log("STL Generation complete. Setting STL file...");
+          const blob = new Blob([data], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          setStlFile(url);
+          setIsGeneratingSTL(false);
+          setStlGenerationProgress(100);
+          break;
+        case 'error':
+          console.error('STL Generation Error:', message);
+          console.error('Stack:', data?.stack);
+          setIsGeneratingSTL(false);
+          alert(`Error generating STL: ${message}`);
+          break;
+      }
     };
   };
 
@@ -168,15 +171,15 @@ const MultiColorPhoto = () => {
     });
   };
 
+  const togglePreview = () => {
+    setShowPreview(!showPreview);
+  };
+
   useEffect(() => {
     if (stlFile && stlPreviewRef.current) {
       stlPreviewRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [stlFile]);
-
-  const togglePreview = () => {
-    setShowPreview(!showPreview);
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -213,17 +216,6 @@ const MultiColorPhoto = () => {
                   <span className="ml-2 text-gray-700">Remap Colors</span>
                 </label>
               </div>
-              <div className="mb-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={reversePalette}
-                    onChange={(e) => setReversePalette(e.target.checked)}
-                    className="form-checkbox h-5 w-5 text-blue-600"
-                  />
-                  <span className="ml-2 text-gray-700">Reverse Palette Order</span>
-                </label>
-              </div>
               <button
                 onClick={handleProcessImage}
                 className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded inline-flex items-center"
@@ -248,8 +240,37 @@ const MultiColorPhoto = () => {
                   handleGenerateSTL={handleGenerateSTL}
                 />
               )}
+              <div className="mb-4 mt-4">
+                <label htmlFor="stl-resolution" className="block text-sm font-medium text-gray-700">
+                  STL Resolution: {(stlResolution * 100).toFixed(0)}%
+                </label>
+                <input
+                  type="range"
+                  id="stl-resolution"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  value={stlResolution}
+                  onChange={(e) => setStlResolution(parseFloat(e.target.value))}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
+          {isGeneratingSTL && (
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2">Generating STL...</h3>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full" 
+                  style={{width: `${stlGenerationProgress}%`}}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {stlGenerationProgress.toFixed(2)}% complete
+              </p>
+            </div>
+          )}
         </div>
 
         {stlFile && (
