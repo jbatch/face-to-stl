@@ -30,8 +30,7 @@ function quantizeColors(imageData, numColors, selectedColors, remapColors) {
   } else {
     // Use k-means to find the centroids
     const km = new kMeans({
-      K: numColors,
-      initialize: kMeans.initialization.random
+      K: numColors
     });
 
     km.cluster(pixels);
