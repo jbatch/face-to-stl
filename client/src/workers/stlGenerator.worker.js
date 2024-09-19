@@ -27,12 +27,27 @@ self.onmessage = function(e) {
       decimationPercentage
     });
 
+    const startTime = performance.now();
     const stlData = generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ, simplificationLevel, decimationPercentage);
+    const endTime = performance.now();
+    const generationTime = (endTime - startTime) / 1000; // Convert to seconds
     
-    log('STL generation completed', { stlDataSize: stlData.byteLength });
+    const fileSizeInBytes = stlData.byteLength;
+    const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
     
-    // Send the ArrayBuffer directly
-    self.postMessage({ type: 'result', data: stlData }, [stlData]);
+    log('STL generation completed', { 
+      stlDataSize: stlData.byteLength,
+      generationTime: generationTime.toFixed(2) + ' seconds',
+      fileSizeInMB: fileSizeInMB.toFixed(2) + ' MB'
+    });
+    
+    // Send the ArrayBuffer directly along with generation time and file size
+    self.postMessage({ 
+      type: 'result', 
+      data: stlData,
+      generationTime: generationTime,
+      fileSizeInMB: fileSizeInMB
+    }, [stlData]);
   } catch (error) {
     log('Error in STL generation', { error: error.message, stack: error.stack });
     self.postMessage({ type: 'error', message: error.message, stack: error.stack });

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { LucideImage } from "lucide-react";
 import StlViewer from "./StlViewer";
 
-const StlComponent = ({ stlFile, colorPalette }) => {
+const StlComponent = ({ stlFile, colorPalette, generationTime, fileSize }) => {
   const containerRef = useRef(null);
 
   return (
@@ -15,6 +15,13 @@ const StlComponent = ({ stlFile, colorPalette }) => {
       >
         {stlFile && <StlViewer stlFile={stlFile} colorPalette={colorPalette} />}
       </div>
+      {(generationTime !== null && fileSize !== null) && (
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2">STL Generation Stats</h3>
+          <p className="text-sm text-gray-600">Generation Time: {generationTime.toFixed(2)} seconds</p>
+          <p className="text-sm text-gray-600">File Size: {fileSize.toFixed(2)} MB</p>
+        </div>
+      )}
       <div className="text-center">
         <a
           href={stlFile}

@@ -31,6 +31,8 @@ const MultiColorPhoto = () => {
   const [baseHeight, setBaseHeight] = useState(5); // Default base height in mm
   const [layerHeight, setLayerHeight] = useState(0.5); // Default layer height in mm
   const stlPreviewRef = useRef(null);
+  const [stlGenerationTime, setStlGenerationTime] = useState(null);
+  const [stlFileSize, setStlFileSize] = useState(null);
 
   const [imageProcessorWorker, setImageProcessorWorker] = useState(null);
   const [stlGeneratorWorker, setStlGeneratorWorker] = useState(null);
@@ -120,6 +122,8 @@ const MultiColorPhoto = () => {
     setIsGeneratingSTL(true);
     setStlFile(null);
     setStlGenerationProgress(0);
+    setStlGenerationTime(null);
+    setStlFileSize(null);
 
     const aspectRatio = imageDimensions.height / imageDimensions.width;
     const width = 70;
@@ -142,7 +146,7 @@ const MultiColorPhoto = () => {
     });
 
     stlGeneratorWorker.onmessage = (e) => {
-      const { type, message, data, percentage } = e.data;
+      const { type, message, data, percentage, generationTime, fileSizeInMB } = e.data;
       switch (type) {
         case 'log':
           console.log(`STL Generator: ${message}`, data);
@@ -152,11 +156,15 @@ const MultiColorPhoto = () => {
           break;
         case 'result':
           console.log("STL Generation complete. Setting STL file...");
+          console.log(`Generation Time: ${generationTime.toFixed(2)} seconds`);
+          console.log(`File Size: ${fileSizeInMB.toFixed(2)} MB`);
           const blob = new Blob([data], { type: 'application/octet-stream' });
           const url = URL.createObjectURL(blob);
           setStlFile(url);
           setIsGeneratingSTL(false);
           setStlGenerationProgress(100);
+          setStlGenerationTime(generationTime);
+          setStlFileSize(fileSizeInMB);
           break;
         case 'error':
           console.error('STL Generation Error:', message);
@@ -347,7 +355,12 @@ const MultiColorPhoto = () => {
 
         {stlFile && (
           <div ref={stlPreviewRef}>
-            <StlComponent stlFile={stlFile} colorPalette={colorPalette} />
+            <StlComponent 
+              stlFile={stlFile} 
+              colorPalette={colorPalette}
+              generationTime={stlGenerationTime}
+              fileSize={stlFileSize}
+            />
           </div>
         )}
       </main>
