@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../config";
 import FileUploader from "./FileUploader";
 import ColorPaletteSelector from "./ColorPaletteSelector";
 import ImageDisplay from "./ImageDisplay";
@@ -28,6 +26,8 @@ const MultiColorPhoto = () => {
   const [showPreview, setShowPreview] = useState(true);
   const [stlGenerationProgress, setStlGenerationProgress] = useState(0);
   const [stlResolution, setStlResolution] = useState(0.5); // 50% of original resolution
+  const [simplificationLevel, setSimplificationLevel] = useState(0);
+  const [decimationPercentage, setDecimationPercentage] = useState(0);
   const [baseHeight, setBaseHeight] = useState(5); // Default base height in mm
   const [layerHeight, setLayerHeight] = useState(0.5); // Default layer height in mm
   const stlPreviewRef = useRef(null);
@@ -132,7 +132,9 @@ const MultiColorPhoto = () => {
       objectHeight: height,
       resolution: stlResolution,
       baseHeight,
-      scaleZ
+      scaleZ,
+      simplificationLevel,
+      decimationPercentage
     });
 
     stlGeneratorWorker.onmessage = (e) => {
@@ -258,6 +260,36 @@ const MultiColorPhoto = () => {
                   step="0.1"
                   value={stlResolution}
                   onChange={(e) => setStlResolution(parseFloat(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="simplification-level" className="block text-sm font-medium text-gray-700">
+                  Simplification Level: {simplificationLevel}
+                </label>
+                <input
+                  type="range"
+                  id="simplification-level"
+                  min="0"
+                  max="3"
+                  step="1"
+                  value={simplificationLevel}
+                  onChange={(e) => setSimplificationLevel(parseInt(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="decimation-percentage" className="block text-sm font-medium text-gray-700">
+                  Decimation Percentage: {decimationPercentage}%
+                </label>
+                <input
+                  type="range"
+                  id="decimation-percentage"
+                  min="0"
+                  max="90"
+                  step="10"
+                  value={decimationPercentage}
+                  onChange={(e) => setDecimationPercentage(parseInt(e.target.value))}
                   className="w-full"
                 />
               </div>
