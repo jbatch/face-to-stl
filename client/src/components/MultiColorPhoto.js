@@ -164,7 +164,8 @@ const MultiColorPhoto = () => {
       console.log("Generated dataURL:", dataURL.slice(0, 100) + "...");  // Log the first 100 characters of the dataURL
       
       setProcessedImageUrl(dataURL);
-      setColorPalette(colorPalette);
+      // Store the color palette as an array of hex codes
+      setColorPalette(colorPalette.map(color => `#${color.toString(16).padStart(6, '0')}`));
       setIsProcessing(false);
     };
   };

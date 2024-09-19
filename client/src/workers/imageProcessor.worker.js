@@ -9,8 +9,13 @@ self.onmessage = function(e) {
     selectedColors,
     remapColors
   });
-  const result = quantizeColors(imageData, numColors, selectedColors, remapColors);
-  self.postMessage(result);
+  try {
+    const result = quantizeColors(imageData, numColors, selectedColors, remapColors);
+    self.postMessage(result);
+  } catch (error) {
+    console.error("Error in worker:", error);
+    self.postMessage({ error: error.message });
+  }
 };
 
 function quantizeColors(imageData, numColors, selectedColors, remapColors) {
@@ -23,75 +28,114 @@ function quantizeColors(imageData, numColors, selectedColors, remapColors) {
     ]);
   }
 
-  let centroids;
-  if (remapColors) {
-    // Use the selectedColors as centroids
-    centroids = selectedColors;
-  } else {
-    // Use k-means to find the centroids
-    const km = new kMeans({
-      K: numColors
-    });
-
-    km.cluster(pixels);
-    while (km.step()) {
-      km.findClosestCentroids();
-      km.moveCentroids();
-
-      if(km.hasConverged()) break;
-    }
-
-    centroids = km.centroids;
+  // Perform k-means clustering
+  const km = new kMeans({ K: numColors });
+  km.cluster(pixels);
+  while (km.step()) {
+    km.findClosestCentroids();
+    km.moveCentroids();
+    if(km.hasConverged()) break;
   }
 
-  console.log("Centroids:", centroids);
+  const centroids = km.centroids;
+  console.log("K-means centroids:", centroids.map(rgbToHex));
 
-  const newImageData = new Uint8ClampedArray(imageData.data.length);
+  // Generate new image data based on k-means centroids
+  const kmeansImageData = new Uint8ClampedArray(imageData.data.length);
   for (let i = 0; i < imageData.data.length; i += 4) {
-    const pixel = [
-      imageData.data[i],
-      imageData.data[i + 1],
-      imageData.data[i + 2]
-    ];
+    const pixel = [imageData.data[i], imageData.data[i + 1], imageData.data[i + 2]];
     const closestCentroidIndex = findClosestCentroidIndex(pixel, centroids);
-    const paletteColor = centroids[closestCentroidIndex];
-
-    newImageData[i] = paletteColor[0];
-    newImageData[i + 1] = paletteColor[1];
-    newImageData[i + 2] = paletteColor[2];
-    newImageData[i + 3] = 255;
+    const centroidColor = centroids[closestCentroidIndex];
+    kmeansImageData[i] = centroidColor[0];
+    kmeansImageData[i + 1] = centroidColor[1];
+    kmeansImageData[i + 2] = centroidColor[2];
+    kmeansImageData[i + 3] = 255;
   }
+
+  let finalImageData = kmeansImageData;
+  let paletteToUse = centroids;
+  let debugColorMapping = null;
+
+  // If remapColors is true, map the centroids to the selected colors
+  if (remapColors) {
+    const selectedColorsRGB = selectedColors.map(color => {
+      if (Array.isArray(color)) return color;
+      return typeof color === 'string' ? hexToRgb(color) : null;
+    }).filter(color => color !== null);
+
+    if (selectedColorsRGB.length === 0) {
+      console.warn("No valid colors in the selected palette. Using k-means centroids.");
+    } else {
+      const mappingResult = mapCentroidsToSelectedColors(centroids, selectedColorsRGB);
+      paletteToUse = selectedColorsRGB;
+      debugColorMapping = mappingResult.debugMapping;
+
+      // Generate final image data based on mapped colors
+      finalImageData = new Uint8ClampedArray(imageData.data.length);
+      for (let i = 0; i < kmeansImageData.length; i += 4) {
+        const kmeansColor = [kmeansImageData[i], kmeansImageData[i + 1], kmeansImageData[i + 2]];
+        const mappedColor = mappingResult.colorMap.get(rgbToHex(kmeansColor)) || kmeansColor;
+        finalImageData[i] = mappedColor[0];
+        finalImageData[i + 1] = mappedColor[1];
+        finalImageData[i + 2] = mappedColor[2];
+        finalImageData[i + 3] = 255;
+      }
+    }
+  }
+
+  console.log("Palette to use:", paletteToUse.map(rgbToHex));
+  console.log("Debug Color Mapping:", debugColorMapping);
 
   const result = {
     quantizedImageData: {
-      data: newImageData,
+      data: finalImageData,
       width: imageData.width,
       height: imageData.height
     },
-    colorPalette: centroids.map(rgbToHex)
+    colorPalette: paletteToUse.map(rgbToHex),
+    debugColorMapping: debugColorMapping
   };
 
   console.log("Worker processing complete. Result:", {
     quantizedImageDataSize: `${result.quantizedImageData.width}x${result.quantizedImageData.height}`,
-    colorPalette: result.colorPalette
+    colorPalette: result.colorPalette,
+    debugColorMapping: result.debugColorMapping
   });
 
   return result;
 }
 
+function mapCentroidsToSelectedColors(centroids, selectedColorsRGB) {
+  const sortedCentroids = centroids.map(c => ({ color: c, luminance: getLuminance(c) }))
+    .sort((a, b) => a.luminance - b.luminance);
+  
+  const sortedSelectedColors = selectedColorsRGB.map(c => ({ color: c, luminance: getLuminance(c) }))
+    .sort((a, b) => a.luminance - b.luminance);
+
+  const mappedCentroids = sortedCentroids.map((centroid, index) => {
+    const selectedColorIndex = Math.floor(index * (sortedSelectedColors.length - 1) / (sortedCentroids.length - 1));
+    return sortedSelectedColors[selectedColorIndex].color;
+  });
+
+  const colorMap = new Map(sortedCentroids.map((c, i) => [rgbToHex(c.color), mappedCentroids[i]]));
+
+  const debugMapping = sortedCentroids.map((c, i) => ({
+    from: rgbToHex(c.color),
+    to: rgbToHex(mappedCentroids[i])
+  }));
+
+  return { colorMap, debugMapping };
+}
+
+function getLuminance(rgb) {
+  return 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+}
+
 function findClosestCentroidIndex(pixel, centroids) {
-  let minDistance = Infinity;
-  let closestIndex = 0;
-
-  for (let i = 0; i < centroids.length; i++) {
-    const distance = euclideanDistance(pixel, centroids[i]);
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestIndex = i;
-    }
-  }
-
-  return closestIndex;
+  return centroids.reduce((closest, centroid, index) => {
+    const distance = euclideanDistance(pixel, centroid);
+    return distance < closest.distance ? { distance, index } : closest;
+  }, { distance: Infinity, index: -1 }).index;
 }
 
 function euclideanDistance(a, b) {
@@ -103,5 +147,10 @@ function euclideanDistance(a, b) {
 }
 
 function rgbToHex(rgb) {
-  return "#" + ((1 << 24) + (Math.round(rgb[0]) << 16) + (Math.round(rgb[1]) << 8) + Math.round(rgb[2])).toString(16).slice(1).padStart(6, '0');
+  return "#" + rgb.map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+}
+
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : null;
 }
