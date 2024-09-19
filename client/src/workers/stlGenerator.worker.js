@@ -1,6 +1,5 @@
 /* eslint-disable no-restricted-globals */
 import * as THREE from 'three';
-import { SimplifyModifier } from 'three/examples/jsm/modifiers/SimplifyModifier.js';
 
 function log(message, data) {
   self.postMessage({ type: 'log', message, data });
@@ -14,7 +13,7 @@ self.onmessage = function(e) {
   log('Received message in STL generator worker', e.data);
   
   try {
-    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution = 1, scaleZ, simplificationLevel = 0, decimationPercentage = 0 } = e.data;
+    const { imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution = 1, scaleZ, simplificationLevel = 0 } = e.data;
     
     log('Starting STL generation', { 
       imageDataSize: `${imageData.width}x${imageData.height}`, 
@@ -23,12 +22,11 @@ self.onmessage = function(e) {
       baseHeight,
       resolution,
       scaleZ,
-      simplificationLevel,
-      decimationPercentage
+      simplificationLevel
     });
 
     const startTime = performance.now();
-    const stlData = generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ, simplificationLevel, decimationPercentage);
+    const stlData = generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ, simplificationLevel);
     const endTime = performance.now();
     const generationTime = (endTime - startTime) / 1000; // Convert to seconds
     
@@ -54,7 +52,7 @@ self.onmessage = function(e) {
   }
 };
 
-function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ, simplificationLevel, decimationPercentage) {
+function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHeight, resolution, scaleZ, simplificationLevel) {
   log('Generating STL', { stage: 'start' });
 
   let geometry = new THREE.BufferGeometry();
@@ -178,15 +176,6 @@ function generateSTL(imageData, colorPalette, objectWidth, objectHeight, baseHei
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setIndex(indices);
-
-  // Apply decimation
-  if (decimationPercentage > 0) {
-    log('Applying decimation', { decimationPercentage });
-    const modifier = new SimplifyModifier();
-    const decimatedGeometry = modifier.modify(geometry, Math.floor(geometry.attributes.position.count * (1 - decimationPercentage / 100)));
-    geometry.dispose();
-    geometry = decimatedGeometry;
-  }
 
   log('Exporting binary STL');
 

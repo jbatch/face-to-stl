@@ -1,27 +1,32 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { LucideImage } from "lucide-react";
-import StlViewer from "./StlViewer";
 
-const StlComponent = ({ stlFile, colorPalette, generationTime, fileSize, baseHeight, layerHeight }) => {
+const LazyStlViewer = lazy(() => import("./StlViewer"));
+
+const StlComponent = ({ stlFile, colorPalette, generationTime, fileSize, baseHeight, layerHeight, showStlViewer }) => {
   const containerRef = useRef(null);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-xl font-semibold mb-4">STL File</h2>
-      <div
-        ref={containerRef}
-        className="mb-4"
-        style={{ height: "400px", width: "100%" }}
-      >
-        {stlFile && (
-          <StlViewer
-            stlFile={stlFile}
-            colorPalette={colorPalette}
-            baseHeight={baseHeight}
-            layerHeight={layerHeight}
-          />
-        )}
-      </div>
+      {showStlViewer && (
+        <div
+          ref={containerRef}
+          className="mb-4"
+          style={{ height: "400px", width: "100%" }}
+        >
+          {stlFile && (
+            <Suspense fallback={<div>Loading STL viewer...</div>}>
+              <LazyStlViewer
+                stlFile={stlFile}
+                colorPalette={colorPalette}
+                baseHeight={baseHeight}
+                layerHeight={layerHeight}
+              />
+            </Suspense>
+          )}
+        </div>
+      )}
       {generationTime !== null && fileSize !== null && (
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-2">STL Generation Stats</h3>

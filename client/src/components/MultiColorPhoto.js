@@ -24,15 +24,16 @@ const MultiColorPhoto = () => {
   ]);
   const [remapColors, setRemapColors] = useState(true);
   const [showPreview, setShowPreview] = useState(true);
-  const [stlGenerationProgress, setStlGenerationProgress] = useState(0);
-  const [stlResolution, setStlResolution] = useState(0.5); // 50% of original resolution
-  const [simplificationLevel, setSimplificationLevel] = useState(0);
-  const [decimationPercentage, setDecimationPercentage] = useState(0);
-  const [baseHeight, setBaseHeight] = useState(5); // Default base height in mm
-  const [layerHeight, setLayerHeight] = useState(0.5); // Default layer height in mm
+  const [stlResolution, setStlResolution] = useState(0.5);
+  const [simplificationLevel, setSimplificationLevel] = useState(1);
+  const [baseHeight, setBaseHeight] = useState(5);
+  const [layerHeight, setLayerHeight] = useState(1);
+  
   const stlPreviewRef = useRef(null);
+  const [stlGenerationProgress, setStlGenerationProgress] = useState(0);
   const [stlGenerationTime, setStlGenerationTime] = useState(null);
   const [stlFileSize, setStlFileSize] = useState(null);
+  const [showStlViewer, setShowStlViewer] = useState(false);
 
   const [imageProcessorWorker, setImageProcessorWorker] = useState(null);
   const [stlGeneratorWorker, setStlGeneratorWorker] = useState(null);
@@ -141,8 +142,7 @@ const MultiColorPhoto = () => {
       resolution: stlResolution,
       baseHeight,
       scaleZ,
-      simplificationLevel,
-      decimationPercentage
+      simplificationLevel
     });
 
     stlGeneratorWorker.onmessage = (e) => {
@@ -219,7 +219,7 @@ const MultiColorPhoto = () => {
               />
             </div>
             <div className="w-full md:w-1/2 px-4">
-            <ColorPaletteSelector
+              <ColorPaletteSelector
                 numColors={numColors}
                 setNumColors={setNumColors}
                 selectedColors={selectedColors}
@@ -254,87 +254,86 @@ const MultiColorPhoto = () => {
                 )}
               </button>
               {processedImageUrl && (
-                <StlGenerator
-                  imageProcessed={processedImageUrl !== undefined}
-                  isGeneratingSTL={isGeneratingSTL}
-                  handleGenerateSTL={handleGenerateSTL}
-                />
+                <>
+                  <hr className="mb-4 mt-4" />
+                  <div className="mb-4 mt-4">
+                    <label htmlFor="stl-resolution" className="block text-sm font-medium text-gray-700">
+                      STL Resolution: {(stlResolution * 100).toFixed(0)}%
+                    </label>
+                    <input
+                      type="range"
+                      id="stl-resolution"
+                      min="0.1"
+                      max="1"
+                      step="0.1"
+                      value={stlResolution}
+                      onChange={(e) => setStlResolution(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label htmlFor="simplification-level" className="block text-sm font-medium text-gray-700">
+                      Simplification Level: {simplificationLevel}
+                    </label>
+                    <input
+                      type="range"
+                      id="simplification-level"
+                      min="0"
+                      max="3"
+                      step="1"
+                      value={simplificationLevel}
+                      onChange={(e) => setSimplificationLevel(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label htmlFor="base-height" className="block text-sm font-medium text-gray-700">
+                      Base Height (mm): {baseHeight}
+                    </label>
+                    <input
+                      type="range"
+                      id="base-height"
+                      min="1"
+                      max="10"
+                      step="0.5"
+                      value={baseHeight}
+                      onChange={(e) => setBaseHeight(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label htmlFor="layer-height" className="block text-sm font-medium text-gray-700">
+                      Layer Height (mm): {layerHeight}
+                    </label>
+                    <input
+                      type="range"
+                      id="layer-height"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={layerHeight}
+                      onChange={(e) => setLayerHeight(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={showStlViewer}
+                        onChange={(e) => setShowStlViewer(e.target.checked)}
+                        className="form-checkbox h-5 w-5 text-blue-600"
+                      />
+                      <span className="ml-2 text-gray-700">Show STL viewer</span>
+                    </label>
+                  </div>
+                  <StlGenerator
+                    imageProcessed={processedImageUrl !== undefined}
+                    isGeneratingSTL={isGeneratingSTL}
+                    handleGenerateSTL={handleGenerateSTL}
+                  />
+                </>
               )}
-              <div className="mb-4 mt-4">
-                <label htmlFor="stl-resolution" className="block text-sm font-medium text-gray-700">
-                  STL Resolution: {(stlResolution * 100).toFixed(0)}%
-                </label>
-                <input
-                  type="range"
-                  id="stl-resolution"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={stlResolution}
-                  onChange={(e) => setStlResolution(parseFloat(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="simplification-level" className="block text-sm font-medium text-gray-700">
-                  Simplification Level: {simplificationLevel}
-                </label>
-                <input
-                  type="range"
-                  id="simplification-level"
-                  min="0"
-                  max="3"
-                  step="1"
-                  value={simplificationLevel}
-                  onChange={(e) => setSimplificationLevel(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="decimation-percentage" className="block text-sm font-medium text-gray-700">
-                  Decimation Percentage: {decimationPercentage}%
-                </label>
-                <input
-                  type="range"
-                  id="decimation-percentage"
-                  min="0"
-                  max="90"
-                  step="10"
-                  value={decimationPercentage}
-                  onChange={(e) => setDecimationPercentage(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="base-height" className="block text-sm font-medium text-gray-700">
-                  Base Height (mm): {baseHeight}
-                </label>
-                <input
-                  type="range"
-                  id="base-height"
-                  min="1"
-                  max="10"
-                  step="0.5"
-                  value={baseHeight}
-                  onChange={(e) => setBaseHeight(parseFloat(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="layer-height" className="block text-sm font-medium text-gray-700">
-                  Layer Height (mm): {layerHeight}
-                </label>
-                <input
-                  type="range"
-                  id="layer-height"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={layerHeight}
-                  onChange={(e) => setLayerHeight(parseFloat(e.target.value))}
-                  className="w-full"
-                />
-              </div>
             </div>
           </div>
           {isGeneratingSTL && (
@@ -362,6 +361,7 @@ const MultiColorPhoto = () => {
               fileSize={stlFileSize}
               baseHeight={baseHeight}
               layerHeight={layerHeight}
+              showStlViewer={showStlViewer}
             />
           </div>
         )}
