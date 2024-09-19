@@ -96,11 +96,6 @@ is-fullwidth-code-point@^3.0.0:
   resolved "https://registry.yarnpkg.com/is-fullwidth-code-point/-/is-fullwidth-code-point-3.0.0.tgz#f116f8064fe90b3f7844a38997c0b75051269f1d"
   integrity sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==
 
-kmeans-js@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/kmeans-js/-/kmeans-js-0.1.2.tgz#5213df53d1fdfd6f9a3acced7081b15fe0d90498"
-  integrity sha512-7JOVsDTWsHpcUlzB3Y1Dvhrwd1F3eKu5ABeCkbkQ0Bav3wkSBq4grlQPz2gSzHsLiDO1MOEm6x3sHjXjoY+EeA==
-
 lodash@^4.17.21:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
@@ -157,11 +152,6 @@ supports-color@^8.1.0:
   integrity sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==
   dependencies:
     has-flag "^4.0.0"
-
-three@^0.168.0:
-  version "0.168.0"
-  resolved "https://registry.yarnpkg.com/three/-/three-0.168.0.tgz#3e33101d91e3e9716f5c610ea9a7b3b8423c242d"
-  integrity sha512-6m6jXtDwMJEK/GGMbAOTSAmxNdzKvvBzgd7q8bE/7Tr6m7PaBh5kKLrN7faWtlglXbzj7sVba48Idwx+NRsZXw==
 
 tree-kill@^1.2.2:
   version "1.2.2"
