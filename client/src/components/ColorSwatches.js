@@ -4,7 +4,7 @@ const ColorSwatches = ({ colorPalette, reversePalette }) => {
   const displayPalette = reversePalette ? [...colorPalette].reverse() : colorPalette;
 
   return (<>
-    <div className="flex justify-center mt-4">
+    <div className="flex justify-center">
       {displayPalette.map((color, index) => (
         <div
           key={index}
