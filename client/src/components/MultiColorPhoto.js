@@ -165,7 +165,7 @@ const MultiColorPhoto = () => {
       
       setProcessedImageUrl(dataURL);
       // Store the color palette as an array of hex codes
-      setColorPalette(colorPalette.map(color => `#${color.toString(16).padStart(6, '0')}`));
+      setColorPalette(colorPalette);
       setIsProcessing(false);
     };
   };
