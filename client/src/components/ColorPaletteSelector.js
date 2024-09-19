@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Shuffle } from "lucide-react";
 
 const ColorPaletteSelector = ({
@@ -22,6 +22,23 @@ const ColorPaletteSelector = ({
       .map(() => getRandomColor());
     setSelectedColors(newColors);
   };
+
+  useEffect(() => {
+    // Adjust the selectedColors array when numColors changes
+    if (selectedColors.length < numColors) {
+      // Add new random colors
+      const newColors = [
+        ...selectedColors,
+        ...Array(numColors - selectedColors.length)
+          .fill()
+          .map(() => getRandomColor()),
+      ];
+      setSelectedColors(newColors);
+    } else if (selectedColors.length > numColors) {
+      // Remove excess colors
+      setSelectedColors(selectedColors.slice(0, numColors));
+    }
+  }, [numColors, selectedColors, setSelectedColors]);
 
   return (
     <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import FileUploader from "./FileUploader";
 import ColorPaletteSelector from "./ColorPaletteSelector";
 import ImageDisplay from "./ImageDisplay";
@@ -51,6 +51,10 @@ const MultiColorPhoto = () => {
   useEffect(() => {
     console.log("STL File updated:", stlFile);
   }, [stlFile]);
+
+  const handleSetSelectedColors = useCallback((colors) => {
+    setSelectedColors(colors);
+  }, []);
 
   const handleFileChange = (file) => {
     setSelectedFile(file);
@@ -207,11 +211,11 @@ const MultiColorPhoto = () => {
               />
             </div>
             <div className="w-full md:w-1/2 px-4">
-              <ColorPaletteSelector
+            <ColorPaletteSelector
                 numColors={numColors}
                 setNumColors={setNumColors}
                 selectedColors={selectedColors}
-                setSelectedColors={setSelectedColors}
+                setSelectedColors={handleSetSelectedColors}
               />
               <div className="mb-4">
                 <label className="flex items-center">
