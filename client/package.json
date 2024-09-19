@@ -19,7 +19,7 @@
     },
     "scripts": {
         "start": "REACT_APP_API_BASE_URL=http://localhost:5000 react-scripts start",
-        "build": "react-scripts build",
+        "build": "DISABLE_ESLINT_PLUGIN=true react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject"
     },
