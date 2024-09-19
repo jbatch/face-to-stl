@@ -74,14 +74,14 @@ const StlViewer = ({ stlFile, colorPalette, baseHeight, layerHeight }) => {
             vec3 getLayerColor(float height) {
               if (height <= baseHeight) return color1;
               float layerIndex = floor((height - baseHeight) / layerHeight);
-              int colorIndex = int(mod(layerIndex, float(${colorPalette.length - 1}))) + 2;
+              int colorIndex = int(min(layerIndex, ${colorPalette.length - 1}.0)) + 1;
               
               ${colorPalette.map((_, i) => 
                 i === 0 ? `if (colorIndex == 1) return color1;` :
                 i === colorPalette.length - 1 ? `return color${i + 1};` :
                 `else if (colorIndex == ${i + 1}) return color${i + 1};`
               ).join('\n')}
-              return color1; // Default color
+              return color${colorPalette.length}; // Return the last color for all higher layers
             }
           `;
 
