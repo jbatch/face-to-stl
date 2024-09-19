@@ -4,6 +4,7 @@ import ColorPaletteSelector from "./ColorPaletteSelector";
 import ImageDisplay from "./ImageDisplay";
 import StlGenerator from "./StlGenerator";
 import StlComponent from "./StlComponent";
+import ColorSwatches from "./ColorSwatches";
 import { FlaskConical } from "lucide-react";
 
 const defaultColors = ["#000000", "#FF0000", "#FF00FF", "#FFA500"];
@@ -270,6 +271,9 @@ const MultiColorPhoto = () => {
                 togglePreview={togglePreview}
                 isProcessing={isProcessing}
               />
+              {processedImageUrl && (
+                <ColorSwatches colorPalette={colorPalette} />
+              )}
             </div>
             <div className="w-full md:w-1/2 px-4">
             <ColorPaletteSelector
