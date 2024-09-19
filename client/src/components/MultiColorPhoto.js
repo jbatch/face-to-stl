@@ -28,6 +28,7 @@ const MultiColorPhoto = () => {
     return savedColors ? JSON.parse(savedColors).length : defaultColors.length;
   });
   const [remapColors, setRemapColors] = useState(true);
+  const [reversePalette, setReversePalette] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [stlResolution, setStlResolution] = useState(0.5);
   const [simplificationLevel, setSimplificationLevel] = useState(1);
@@ -188,9 +189,12 @@ const MultiColorPhoto = () => {
 
     const scaleZ = layerHeight;
 
+    // Apply reverse palette if the option is selected
+    const stlColorPalette = reversePalette ? [...colorPalette].reverse() : colorPalette;
+
     stlGeneratorWorker.postMessage({
       imageData,
-      colorPalette,
+      colorPalette: stlColorPalette,
       objectWidth: width,
       objectHeight: height,
       resolution: stlResolution,
@@ -272,7 +276,7 @@ const MultiColorPhoto = () => {
                 isProcessing={isProcessing}
               />
               {processedImageUrl && (
-                <ColorSwatches colorPalette={colorPalette} />
+                <ColorSwatches colorPalette={colorPalette} reversePalette={reversePalette} />
               )}
             </div>
             <div className="w-full md:w-1/2 px-4">
@@ -292,6 +296,17 @@ const MultiColorPhoto = () => {
                     className="form-checkbox h-5 w-5 text-blue-600"
                   />
                   <span className="ml-2 text-gray-700">Remap Colors</span>
+                </label>
+              </div>
+              <div className="mb-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={reversePalette}
+                    onChange={(e) => setReversePalette(e.target.checked)}
+                    className="form-checkbox h-5 w-5 text-blue-600"
+                  />
+                  <span className="ml-2 text-gray-700">Reverse Palette</span>
                 </label>
               </div>
               <button
@@ -414,7 +429,7 @@ const MultiColorPhoto = () => {
           <div ref={stlPreviewRef}>
             <StlComponent 
               stlFile={stlFile} 
-              colorPalette={colorPalette}
+              colorPalette={reversePalette ? [...colorPalette].reverse() : colorPalette}
               generationTime={stlGenerationTime}
               fileSize={stlFileSize}
               baseHeight={baseHeight}

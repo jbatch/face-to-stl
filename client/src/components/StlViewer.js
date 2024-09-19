@@ -61,15 +61,14 @@ const StlViewer = ({ stlFile, colorPalette, baseHeight, layerHeight }) => {
           matrix.makeRotationX(-Math.PI / 2); // Rotate 90 degrees around X-axis
           geometry.applyMatrix4(matrix);
 
-          // Custom shader material
           const colors = colorPalette.reduce(
             (acc, cur, i) => ({
               ...acc,
-              [`color${i + 1}`]: { value: new THREE.Color(parseInt(cur.slice(1), 16)) },
+              [`color${i + 1}`]: { value: new THREE.Color(cur) },
             }),
             {}
           );
-
+    
           const layerColorFunc = `
             vec3 getLayerColor(float height) {
               if (height <= baseHeight) return color1;
