@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
-const StlViewer = ({ stlFile, colorPalette }) => {
+const StlViewer = ({ stlFile, colorPalette, baseHeight, layerHeight }) => {
   const mountRef = useRef(null);
   const [error, setError] = useState(null);
 
@@ -18,16 +18,12 @@ const StlViewer = ({ stlFile, colorPalette }) => {
       scene.background = new THREE.Color(0xf0f0f0);
 
       // Camera setup
-      const aspect =
-        mountRef.current.clientWidth / mountRef.current.clientHeight;
+      const aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
       camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
 
       // Renderer setup
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(
-        mountRef.current.clientWidth,
-        mountRef.current.clientHeight
-      );
+      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
       mountRef.current.appendChild(renderer.domElement);
 
       // Controls setup
@@ -37,10 +33,10 @@ const StlViewer = ({ stlFile, colorPalette }) => {
       controls.screenSpacePanning = false;
 
       // Lighting setup
-      const ambientLight = new THREE.AmbientLight(0x404040);
+      const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
       scene.add(ambientLight);
 
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
       directionalLight.position.set(1, 1, 1);
       scene.add(directionalLight);
 
@@ -62,34 +58,38 @@ const StlViewer = ({ stlFile, colorPalette }) => {
 
           // Apply transformations
           const matrix = new THREE.Matrix4();
-          matrix.makeRotationZ(-Math.PI); // Rotate 180 degrees around Z-axis
-          geometry.applyMatrix4(matrix);
-
           matrix.makeRotationX(-Math.PI / 2); // Rotate 90 degrees around X-axis
           geometry.applyMatrix4(matrix);
-
-          const objectWidth =
-            geometry.boundingBox.max.x - geometry.boundingBox.min.x;
-          matrix.makeTranslation(objectWidth, 0, 0);
-          geometry.applyMatrix4(matrix);
-
-          // Update bounding box and sphere after transformations
-          geometry.computeBoundingBox();
-          geometry.computeBoundingSphere();
 
           // Custom shader material
           const colors = colorPalette.reduce(
             (acc, cur, i) => ({
               ...acc,
-              [`color${i + 1}`]: { value: new THREE.Color(parseInt(cur, 16)) },
+              [`color${i + 1}`]: { value: new THREE.Color(parseInt(cur.slice(1), 16)) },
             }),
             {}
           );
-          // TODO (make work with N colors)
-          const layerColorFunc = `mix(color1, color2, step(5.01 , t));`;
+
+          const layerColorFunc = `
+            vec3 getLayerColor(float height) {
+              if (height <= baseHeight) return color1;
+              float layerIndex = floor((height - baseHeight) / layerHeight);
+              int colorIndex = int(mod(layerIndex, float(${colorPalette.length - 1}))) + 2;
+              
+              ${colorPalette.map((_, i) => 
+                i === 0 ? `if (colorIndex == 1) return color1;` :
+                i === colorPalette.length - 1 ? `return color${i + 1};` :
+                `else if (colorIndex == ${i + 1}) return color${i + 1};`
+              ).join('\n')}
+              return color1; // Default color
+            }
+          `;
+
           const customMaterial = new THREE.ShaderMaterial({
             uniforms: {
               ...colors,
+              baseHeight: { value: baseHeight },
+              layerHeight: { value: layerHeight },
               minY: { value: geometry.boundingBox.min.y },
               maxY: { value: geometry.boundingBox.max.y },
             },
@@ -103,21 +103,32 @@ const StlViewer = ({ stlFile, colorPalette }) => {
               }
             `,
             fragmentShader: `
-              uniform vec3 color1;
-              uniform vec3 color2;
+              ${Object.keys(colors).map(color => `uniform vec3 ${color};`).join('\n')}
+              uniform float baseHeight;
+              uniform float layerHeight;
               uniform float minY;
               uniform float maxY;
               varying vec3 vPosition;
               varying vec3 vNormal;
+              ${layerColorFunc}
               void main() {
-                float t = vPosition.y;
-                vec3 color = ${layerColorFunc};
+                float height = vPosition.y - minY;
+                vec3 color = getLayerColor(height);
                 
-                // Basic lighting calculation
+                // Improved lighting calculation
                 vec3 light = normalize(vec3(1.0, 1.0, 1.0));
-                float dProd = max(0.0, dot(vNormal, light));
+                float dProd = max(0.3, dot(vNormal, light));
                 
-                gl_FragColor = vec4(color * (0.5 + 0.5 * dProd), 1.0);
+                // Ambient light
+                vec3 ambient = 0.4 * color;
+                
+                // Diffuse light
+                vec3 diffuse = 0.6 * dProd * color;
+                
+                // Combine lighting
+                vec3 finalColor = ambient + diffuse;
+                
+                gl_FragColor = vec4(finalColor, 1.0);
               }
             `,
             side: THREE.DoubleSide, // Render both sides of each face
@@ -130,7 +141,7 @@ const StlViewer = ({ stlFile, colorPalette }) => {
           const { radius, center } = geometry.boundingSphere;
 
           // Position camera to fit the object
-          const distanceToFit = radius * 3;
+          const distanceToFit = radius * 2.5;
           camera.position.set(distanceToFit, distanceToFit, distanceToFit);
           camera.lookAt(center);
 
@@ -201,7 +212,7 @@ const StlViewer = ({ stlFile, colorPalette }) => {
       console.error("Error in STL viewer:", err);
       setError(`Failed to load STL file: ${err.message}`);
     }
-  }, [colorPalette, stlFile]);
+  }, [colorPalette, stlFile, baseHeight, layerHeight]);
 
   if (error) {
     return <div>Error: {error}</div>;

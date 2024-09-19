@@ -360,6 +360,8 @@ const MultiColorPhoto = () => {
               colorPalette={colorPalette}
               generationTime={stlGenerationTime}
               fileSize={stlFileSize}
+              baseHeight={baseHeight}
+              layerHeight={layerHeight}
             />
           </div>
         )}

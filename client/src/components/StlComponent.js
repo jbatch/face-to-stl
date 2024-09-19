@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { LucideImage } from "lucide-react";
 import StlViewer from "./StlViewer";
 
-const StlComponent = ({ stlFile, colorPalette, generationTime, fileSize }) => {
+const StlComponent = ({ stlFile, colorPalette, generationTime, fileSize, baseHeight, layerHeight }) => {
   const containerRef = useRef(null);
 
   return (
@@ -13,13 +13,24 @@ const StlComponent = ({ stlFile, colorPalette, generationTime, fileSize }) => {
         className="mb-4"
         style={{ height: "400px", width: "100%" }}
       >
-        {stlFile && <StlViewer stlFile={stlFile} colorPalette={colorPalette} />}
+        {stlFile && (
+          <StlViewer
+            stlFile={stlFile}
+            colorPalette={colorPalette}
+            baseHeight={baseHeight}
+            layerHeight={layerHeight}
+          />
+        )}
       </div>
-      {(generationTime !== null && fileSize !== null) && (
+      {generationTime !== null && fileSize !== null && (
         <div className="mb-4">
           <h3 className="text-lg font-semibold mb-2">STL Generation Stats</h3>
-          <p className="text-sm text-gray-600">Generation Time: {generationTime.toFixed(2)} seconds</p>
-          <p className="text-sm text-gray-600">File Size: {fileSize.toFixed(2)} MB</p>
+          <p className="text-sm text-gray-600">
+            Generation Time: {generationTime.toFixed(2)} seconds
+          </p>
+          <p className="text-sm text-gray-600">
+            File Size: {fileSize.toFixed(2)} MB
+          </p>
         </div>
       )}
       <div className="text-center">
