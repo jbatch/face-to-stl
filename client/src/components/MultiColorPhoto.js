@@ -6,6 +6,8 @@ import StlGenerator from "./StlGenerator";
 import StlComponent from "./StlComponent";
 import { FlaskConical } from "lucide-react";
 
+const defaultColors = ["#000000", "#FF0000", "#FF00FF", "#FFA500"];
+
 const MultiColorPhoto = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -15,13 +17,14 @@ const MultiColorPhoto = () => {
   const [isGeneratingSTL, setIsGeneratingSTL] = useState(false);
   const [colorPalette, setColorPalette] = useState([]);
   const [stlFile, setStlFile] = useState(null);
-  const [numColors, setNumColors] = useState(4);
-  const [selectedColors, setSelectedColors] = useState([
-    "#000000",
-    "#FF0000",
-    "#FF00FF",
-    "#FFA500",
-  ]);
+  const [selectedColors, setSelectedColors] = useState(() => {
+    const savedColors = localStorage.getItem('customColors');
+    return savedColors ? JSON.parse(savedColors) : defaultColors;
+  });
+  const [numColors, setNumColors] = useState(() => {
+    const savedColors = localStorage.getItem('customColors');
+    return savedColors ? JSON.parse(savedColors).length : defaultColors.length;
+  });
   const [remapColors, setRemapColors] = useState(true);
   const [showPreview, setShowPreview] = useState(true);
   const [stlResolution, setStlResolution] = useState(0.5);
@@ -57,7 +60,25 @@ const MultiColorPhoto = () => {
 
   const handleSetSelectedColors = useCallback((colors) => {
     setSelectedColors(colors);
+    localStorage.setItem('customColors', JSON.stringify(colors));
   }, []);
+
+  const handleSetNumColors = useCallback((num) => {
+    setNumColors(num);
+    if (selectedColors.length < num) {
+      const newColors = [
+        ...selectedColors,
+        ...Array(num - selectedColors.length).fill().map(() => getRandomColor())
+      ];
+      handleSetSelectedColors(newColors);
+    } else if (selectedColors.length > num) {
+      handleSetSelectedColors(selectedColors.slice(0, num));
+    }
+  }, [selectedColors, handleSetSelectedColors]);
+
+  const getRandomColor = () => {
+    return "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0");
+  };
 
   const handleFileChange = (file) => {
     setSelectedFile(file);
@@ -219,11 +240,12 @@ const MultiColorPhoto = () => {
               />
             </div>
             <div className="w-full md:w-1/2 px-4">
-              <ColorPaletteSelector
+            <ColorPaletteSelector
                 numColors={numColors}
                 setNumColors={setNumColors}
                 selectedColors={selectedColors}
                 setSelectedColors={handleSetSelectedColors}
+                defaultColors={defaultColors}
               />
               <div className="mb-4">
                 <label className="flex items-center">
