@@ -3,6 +3,12 @@ import kMeans from 'kmeans-js';
 
 self.onmessage = function(e) {
   const { imageData, numColors, selectedColors, remapColors } = e.data;
+  console.log("Worker received data:", {
+    imageDataSize: `${imageData.width}x${imageData.height}`,
+    numColors,
+    selectedColors,
+    remapColors
+  });
   const result = quantizeColors(imageData, numColors, selectedColors, remapColors);
   self.postMessage(result);
 };
@@ -17,28 +23,31 @@ function quantizeColors(imageData, numColors, selectedColors, remapColors) {
     ]);
   }
 
-  const km = new kMeans({
-    K: numColors
-  });
-
-  km.cluster(pixels);
-  while (km.step()) {
-    km.findClosestCentroids();
-    km.moveCentroids();
-
-    if(km.hasConverged()) break;
-  }
-
-  const centroids = km.centroids;
-
-  let palette;
+  let centroids;
   if (remapColors) {
-    palette = selectedColors.map(color => hexToRgb(color));
+    // Use the selectedColors as centroids
+    centroids = selectedColors;
   } else {
-    palette = centroids;
+    // Use k-means to find the centroids
+    const km = new kMeans({
+      K: numColors,
+      initialize: kMeans.initialization.random
+    });
+
+    km.cluster(pixels);
+    while (km.step()) {
+      km.findClosestCentroids();
+      km.moveCentroids();
+
+      if(km.hasConverged()) break;
+    }
+
+    centroids = km.centroids;
   }
 
-  const newImageData = new ImageData(imageData.width, imageData.height);
+  console.log("Centroids:", centroids);
+
+  const newImageData = new Uint8ClampedArray(imageData.data.length);
   for (let i = 0; i < imageData.data.length; i += 4) {
     const pixel = [
       imageData.data[i],
@@ -46,18 +55,29 @@ function quantizeColors(imageData, numColors, selectedColors, remapColors) {
       imageData.data[i + 2]
     ];
     const closestCentroidIndex = findClosestCentroidIndex(pixel, centroids);
-    const paletteColor = palette[closestCentroidIndex];
+    const paletteColor = centroids[closestCentroidIndex];
 
-    newImageData.data[i] = paletteColor[0];
-    newImageData.data[i + 1] = paletteColor[1];
-    newImageData.data[i + 2] = paletteColor[2];
-    newImageData.data[i + 3] = 255;
+    newImageData[i] = paletteColor[0];
+    newImageData[i + 1] = paletteColor[1];
+    newImageData[i + 2] = paletteColor[2];
+    newImageData[i + 3] = 255;
   }
 
-  return {
-    quantizedImageData: newImageData,
-    colorPalette: palette.map(rgbToHex)
+  const result = {
+    quantizedImageData: {
+      data: newImageData,
+      width: imageData.width,
+      height: imageData.height
+    },
+    colorPalette: centroids.map(rgbToHex)
   };
+
+  console.log("Worker processing complete. Result:", {
+    quantizedImageDataSize: `${result.quantizedImageData.width}x${result.quantizedImageData.height}`,
+    colorPalette: result.colorPalette
+  });
+
+  return result;
 }
 
 function findClosestCentroidIndex(pixel, centroids) {
@@ -83,15 +103,6 @@ function euclideanDistance(a, b) {
   );
 }
 
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? [
-    parseInt(result[1], 16),
-    parseInt(result[2], 16),
-    parseInt(result[3], 16)
-  ] : null;
-}
-
 function rgbToHex(rgb) {
-  return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
+  return "#" + ((1 << 24) + (Math.round(rgb[0]) << 16) + (Math.round(rgb[1]) << 8) + Math.round(rgb[2])).toString(16).slice(1).padStart(6, '0');
 }

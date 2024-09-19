@@ -10,6 +10,7 @@ const defaultColors = ["#000000", "#FF0000", "#FF00FF", "#FFA500"];
 
 const MultiColorPhoto = () => {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [originalImageData, setOriginalImageData] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [imageDimensions, setImageDimensions] = useState(null);
   const [processedImageUrl, setProcessedImageUrl] = useState(null);
@@ -96,12 +97,18 @@ const MultiColorPhoto = () => {
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      setOriginalImageData(ctx.getImageData(0, 0, img.width, img.height));
     };
     img.src = URL.createObjectURL(file);
   };
 
   const handleProcessImage = async () => {
-    if (!selectedFile || !imageProcessorWorker) {
+    if (!selectedFile || !imageProcessorWorker || !originalImageData) {
       alert("Please select an image first!");
       return;
     }
@@ -112,24 +119,49 @@ const MultiColorPhoto = () => {
     setStlFile(null);
     setShowPreview(false);
 
-    const imageData = await createImageData(selectedFile);
-    
-    imageProcessorWorker.postMessage({
-      imageData,
+    // Create a stable color palette based on selectedColors
+    const stableColorPalette = selectedColors.map(color => {
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      return [r, g, b];
+    });
+
+    console.log("Sending data to worker:", {
+      imageDataSize: `${originalImageData.width}x${originalImageData.height}`,
       numColors,
-      selectedColors,
+      selectedColors: stableColorPalette,
+      remapColors
+    });
+
+    imageProcessorWorker.postMessage({
+      imageData: originalImageData,
+      numColors,
+      selectedColors: stableColorPalette,
       remapColors
     });
 
     imageProcessorWorker.onmessage = (e) => {
+      console.log("Received response from worker:", e.data);
       const { quantizedImageData, colorPalette } = e.data;
+      
+      if (!quantizedImageData || !quantizedImageData.data || quantizedImageData.data.length === 0) {
+        console.error("Received invalid quantizedImageData from worker");
+        setIsProcessing(false);
+        alert("Error processing image. Please try again.");
+        return;
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = quantizedImageData.width;
       canvas.height = quantizedImageData.height;
       const ctx = canvas.getContext('2d');
-      ctx.putImageData(quantizedImageData, 0, 0);
+      ctx.putImageData(new ImageData(new Uint8ClampedArray(quantizedImageData.data), quantizedImageData.width, quantizedImageData.height), 0, 0);
       
-      setProcessedImageUrl(canvas.toDataURL());
+      const dataURL = canvas.toDataURL();
+      console.log("Generated dataURL:", dataURL.slice(0, 100) + "...");  // Log the first 100 characters of the dataURL
+      
+      setProcessedImageUrl(dataURL);
       setColorPalette(colorPalette);
       setIsProcessing(false);
     };
