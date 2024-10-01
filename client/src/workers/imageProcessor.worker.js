@@ -1,5 +1,4 @@
 /* eslint-disable no-restricted-globals */
-import kMeans from 'kmeans-js';
 
 self.onmessage = function(e) {
   const { imageData, numColors, selectedColors, remapColors } = e.data;
@@ -28,19 +27,11 @@ function quantizeColors(imageData, numColors, selectedColors, remapColors) {
     ]);
   }
 
-  // Perform k-means clustering
-  const km = new kMeans({ K: numColors, initialize: initializeUniqueCentroids });
-  km.cluster(pixels);
-  while (km.step()) {
-    km.findClosestCentroids();
-    km.moveCentroids();
-    if(km.hasConverged()) break;
-  }
+  // Custom k-means implementation
+  const centroids = customKMeans(pixels, numColors);
+  console.log("Custom K-means centroids:", centroids.map(rgbToHex));
 
-  const centroids = km.centroids;
-  console.log("K-means centroids:", centroids.map(rgbToHex));
-
-  // Generate new image data based on k-means centroids
+  // Generate new image data based on centroids
   const kmeansImageData = new Uint8ClampedArray(imageData.data.length);
   for (let i = 0; i < imageData.data.length; i += 4) {
     const pixel = [imageData.data[i], imageData.data[i + 1], imageData.data[i + 2]];
@@ -105,23 +96,82 @@ function quantizeColors(imageData, numColors, selectedColors, remapColors) {
   return result;
 }
 
-function initializeUniqueCentroids(X, K, m, n) {
-    const uniqueColors = new Set();
-    const centroids = [];
-  
-    while (uniqueColors.size < K) {
-      const randomIndex = Math.floor(Math.random() * m);
-      const color = X[randomIndex];
-      const colorKey = color.join(','); // Convert color array to string for Set
-  
-      if (!uniqueColors.has(colorKey)) {
-        uniqueColors.add(colorKey);
-        centroids.push(color);
-      }
+function customKMeans(pixels, k) {
+  // Initialize centroids
+  let centroids = initializeUniqueCentroids(pixels, k);
+  let oldCentroids = [];
+  let iterations = 0;
+  const maxIterations = 100;
+
+  while (iterations < maxIterations) {
+    // Assign pixels to centroids
+    const clusters = Array(k).fill().map(() => []);
+    for (const pixel of pixels) {
+      const closestCentroidIndex = findClosestCentroidIndex(pixel, centroids);
+      clusters[closestCentroidIndex].push(pixel);
     }
-  
-    return centroids;
+
+    // Store old centroids
+    oldCentroids = centroids.map(centroid => [...centroid]);
+
+    // Calculate new centroids
+    centroids = calculateNewCentroids(clusters, oldCentroids);
+
+    // Check for convergence
+    if (checkConvergence(centroids, oldCentroids)) {
+      console.log(`K-means converged after ${iterations + 1} iterations`);
+      break;
+    }
+
+    iterations++;
   }
+
+  if (iterations === maxIterations) {
+    console.warn("K-means reached maximum iterations without converging");
+  }
+
+  return centroids;
+}
+
+function calculateNewCentroids(clusters, oldCentroids) {
+  return clusters.map((cluster, index) => {
+    if (cluster.length === 0) return oldCentroids[index];
+    const sum = cluster.reduce(
+      (acc, pixel) => acc.map((v, i) => v + pixel[i]),
+      [0, 0, 0]
+    );
+    return sum.map(v => v / cluster.length);
+  });
+}
+
+function checkConvergence(newCentroids, oldCentroids) {
+  return newCentroids.every((centroid, i) => 
+    euclideanDistance(centroid, oldCentroids[i]) < 1
+  );
+}
+
+function initializeUniqueCentroids(pixels, k) {
+  const uniqueColors = new Set();
+  const centroids = [];
+
+  while (uniqueColors.size < k && uniqueColors.size < pixels.length) {
+    const randomIndex = Math.floor(Math.random() * pixels.length);
+    const color = pixels[randomIndex];
+    const colorKey = color.join(',');
+
+    if (!uniqueColors.has(colorKey)) {
+      uniqueColors.add(colorKey);
+      centroids.push(color);
+    }
+  }
+
+  // If we couldn't find enough unique colors, duplicate the last one
+  while (centroids.length < k) {
+    centroids.push([...centroids[centroids.length - 1]]);
+  }
+
+  return centroids;
+}
 
 function mapCentroidsToSelectedColors(centroids, selectedColorsRGB) {
   const sortedCentroids = centroids.map(c => ({ color: c, luminance: getLuminance(c) }))
@@ -156,8 +206,6 @@ function findClosestCentroidIndex(pixel, centroids) {
   }, { distance: Infinity, index: -1 }).index;
 }
 
-
-
 function euclideanDistance(a, b) {
   return Math.sqrt(
     Math.pow(a[0] - b[0], 2) +
@@ -174,4 +222,3 @@ function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : null;
 }
-
