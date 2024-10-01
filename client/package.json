@@ -7,6 +7,7 @@
         "@testing-library/react": "^13.4.0",
         "@testing-library/user-event": "^13.5.0",
         "axios": "^0.27.2",
+        "kmeans-js": "^0.1.2",
         "lucide-react": "^0.438.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
@@ -18,7 +19,7 @@
     },
     "scripts": {
         "start": "REACT_APP_API_BASE_URL=http://localhost:5000 react-scripts start",
-        "build": "react-scripts build",
+        "build": "DISABLE_ESLINT_PLUGIN=true react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject"
     },

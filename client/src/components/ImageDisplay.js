@@ -13,7 +13,7 @@ const ImageDisplay = ({
   const hasImage = previewUrl || processedImageUrl;
 
   return (
-    <div className="mt-4 w-full max-w-md">
+    <div className="mt-4 w-full max-w-md mx-auto">
       <div className="relative">
         {isProcessing ? (
           <div className="w-full h-64 bg-gray-200 rounded-lg flex flex-col items-center justify-center">

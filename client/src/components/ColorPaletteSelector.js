@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Shuffle } from "lucide-react";
 
 const ColorPaletteSelector = ({
@@ -6,6 +6,7 @@ const ColorPaletteSelector = ({
   setNumColors,
   selectedColors,
   setSelectedColors,
+  defaultColors
 }) => {
   const getRandomColor = () => {
     return (
@@ -22,6 +23,42 @@ const ColorPaletteSelector = ({
       .map(() => getRandomColor());
     setSelectedColors(newColors);
   };
+
+  useEffect(() => {
+    // Load colors from local storage on first mount
+    const savedColors = localStorage.getItem('customColors');
+    if (savedColors) {
+      const parsedColors = JSON.parse(savedColors);
+      setSelectedColors(parsedColors);
+      setNumColors(parsedColors.length);
+    } else {
+      // Use default colors if no saved colors are found
+      setSelectedColors(defaultColors);
+      setNumColors(defaultColors.length);
+    }
+  }, [defaultColors, setSelectedColors, setNumColors]);
+
+  useEffect(() => {
+    // Save colors to local storage whenever they change
+    localStorage.setItem('customColors', JSON.stringify(selectedColors));
+  }, [selectedColors]);
+
+  useEffect(() => {
+    // Adjust the selectedColors array when numColors changes
+    if (selectedColors.length < numColors) {
+      // Add new random colors
+      const newColors = [
+        ...selectedColors,
+        ...Array(numColors - selectedColors.length)
+          .fill()
+          .map(() => getRandomColor()),
+      ];
+      setSelectedColors(newColors);
+    } else if (selectedColors.length > numColors) {
+      // Remove excess colors
+      setSelectedColors(selectedColors.slice(0, numColors));
+    }
+  }, [numColors, selectedColors, setSelectedColors]);
 
   return (
     <div>
